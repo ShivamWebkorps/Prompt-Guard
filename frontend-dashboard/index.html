@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>PromptGuard — Enterprise AI Security Dashboard</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      height: 100%;
+      overflow: hidden;
+      background: #0d1117;
+      font-family: 'Inter', sans-serif;
+      color: #c9d1d9;
+    }
+
+    #root {
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, .03);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    @keyframes livePulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: .3;
+        transform: scale(.65)
+      }
+    }
+
+    @keyframes countIn {
+      from {
+        opacity: 0;
+        transform: scale(.8) translateY(8px)
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0)
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0
+      }
+
+      100% {
+        background-position: 200% 0
+      }
+    }
+
+    .fade-up {
+      animation: fadeUp .4s cubic-bezier(.22, 1, .36, 1) both;
+    }
+
+    .d1 {
+      animation-delay: 40ms
+    }
+
+    .d2 {
+      animation-delay: 80ms
+    }
+
+    .d3 {
+      animation-delay: 120ms
+    }
+
+    .d4 {
+      animation-delay: 160ms
+    }
+
+    .d5 {
+      animation-delay: 200ms
+    }
+
+    .d6 {
+      animation-delay: 240ms
+    }
+
+    .d7 {
+      animation-delay: 280ms
+    }
+
+    .sp {
+      display: inline-block;
+      animation: spin .75s linear infinite;
+    }
+
+    .live-dot {
+      animation: livePulse 2s ease infinite;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+    }
+
+    .card-hover {
+      transition: border-color .18s, box-shadow .18s, transform .18s;
+    }
+
+    .card-hover:hover {
+      border-color: #484f58;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, .5);
+      transform: translateY(-1px);
+    }
+
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 85% 15%, var(--sc-glow, rgba(255, 255, 255, .04)) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .nav-tab {
+      transition: all .14s;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      color: #8b949e;
+    }
+
+    .nav-tab:hover {
+      background: rgba(255, 255, 255, .06);
+      color: #c9d1d9;
+    }
+
+    .nav-tab.active {
+      background: rgba(88, 166, 255, .12);
+      color: #58a6ff;
+      border-color: rgba(88, 166, 255, .25);
+    }
+
+    .tr-hover {
+      transition: background .1s;
+    }
+
+    .tr-hover:hover {
+      background: rgba(255, 255, 255, .03) !important;
+    }
+
+    .scroll-y {
+      overflow-y: auto;
+    }
+
+    .scroll-y::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .scroll-y::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 4px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .3px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      transition: all .18s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #1f6feb, #388bfd);
+      color: #fff;
+      box-shadow: 0 0 16px rgba(31, 111, 235, .3);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 24px rgba(56, 139, 253, .4);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid #30363d;
+      color: #8b949e;
+    }
+
+    .btn-ghost:hover {
+      border-color: #58a6ff;
+      color: #58a6ff;
+    }
+
+    .btn-danger {
+      background: rgba(218, 54, 51, .08);
+      border: 1px solid rgba(218, 54, 51, .25);
+      color: #f85149;
+    }
+
+    .btn-danger:hover {
+      background: rgba(218, 54, 51, .15);
+    }
+
+    .grad {
+      background: linear-gradient(135deg, #58a6ff, #a371f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .comply-ok {
+      background: rgba(46, 160, 67, .1);
+      border: 1px solid rgba(46, 160, 67, .3);
+      color: #3fb950;
+    }
+
+    .comply-warn {
+      background: rgba(187, 128, 9, .1);
+      border: 1px solid rgba(187, 128, 9, .3);
+      color: #d29922;
+    }
+
+    .comply-bad {
+      background: rgba(218, 54, 51, .1);
+      border: 1px solid rgba(218, 54, 51, .3);
+      color: #f85149;
+    }
+
+    .risk-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef, memo } = React;
+    const API = "http://localhost:8080";
+
+    const nv = v => Number(v) || 0;
+    const fmtAge = ts => {
+      try {
+        const d = Math.floor((Date.now() - new Date(ts)) / 60000);
+        if (d < 1) return "Just now"; if (d < 60) return `${d}m ago`;
+        const h = Math.floor(d / 60); if (h < 24) return `${h}h ago`;
+        const dy = Math.floor(h / 24); return dy === 1 ? "Yesterday" : `${dy}d ago`;
+      } catch { return "—"; }
+    };
+
+    /*
+     * ─────────────────────────────────────────────────────────────
+     *  ACTION COLOR MAP
+     *  ALLOW   → green   #3fb950
+     *  REDACT  → PURPLE  #a371f7   ← changed from amber
+     *  BLOCK   → red     #f85149
+     *  ALERT   → YELLOW  #d29922   ← changed from purple
+     * ─────────────────────────────────────────────────────────────
+     */
+    const AC = {
+      ALLOW: { l: "Safe", bg: "rgba(46,160,67,.12)", bd: "rgba(46,160,67,.35)", tx: "#3fb950" },
+      REDACT: { l: "Redacted", bg: "rgba(163,113,247,.12)", bd: "rgba(163,113,247,.35)", tx: "#a371f7" },  // PURPLE
+      BLOCK: { l: "Blocked", bg: "rgba(218,54,51,.12)", bd: "rgba(218,54,51,.35)", tx: "#f85149" },
+      ALERT: { l: "Critical", bg: "rgba(210,153,34,.12)", bd: "rgba(210,153,34,.35)", tx: "#d29922" },  // YELLOW
+    };
+
+    /*
+     * ─────────────────────────────────────────────────────────────
+     *  ACTION THEME (used in AllLogsTab row tints + PromptModal)
+     *  Same swap: REDACT=purple, ALERT=yellow
+     * ─────────────────────────────────────────────────────────────
+     */
+    const ACTION_THEME = {
+      ALLOW: { accent: "#3fb950", bg: "linear-gradient(160deg,#0b2215,#0d1a10)", border: "#2ea04355", glow: "rgba(63,185,80,.25)", label: "✅ Safe", headerBg: "rgba(46,160,67,.15)" },
+      REDACT: { accent: "#a371f7", bg: "linear-gradient(160deg,#160e22,#100c1c)", border: "#6e40c955", glow: "rgba(163,113,247,.25)", label: "✏️ Redacted", headerBg: "rgba(163,113,247,.15)" },  // PURPLE
+      BLOCK: { accent: "#f85149", bg: "linear-gradient(160deg,#1e0e0d,#180a0a)", border: "#da363355", glow: "rgba(248,81,73,.25)", label: "🚫 Blocked", headerBg: "rgba(248,81,73,.15)" },
+      ALERT: { accent: "#d29922", bg: "linear-gradient(160deg,#1a1400,#141000)", border: "#cc980055", glow: "rgba(210,153,34,.25)", label: "⚡ Critical", headerBg: "rgba(210,153,34,.12)" },  // YELLOW
+    };
+    const getTheme = action => ACTION_THEME[action] || { accent: "#8b949e", bg: "#161b22", border: "#30363d55", glow: "rgba(0,0,0,.3)", label: "— None", headerBg: "rgba(255,255,255,.04)" };
+
+    function useBreakpoint() {
+      const [w, setW] = useState(() => window.innerWidth);
+      useEffect(() => { const fn = () => setW(window.innerWidth); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
+      return { w, isDesktop: w >= 1100, isTablet: w >= 641 && w < 1100, isMobile: w < 641 };
+    }
+
+    const LiveClock = memo(function LiveClock() {
+      const [t, setT] = useState(() => new Date().toLocaleTimeString());
+      useEffect(() => { const id = setInterval(() => setT(new Date().toLocaleTimeString()), 1000); return () => clearInterval(id); }, []);
+      return <span style={{ fontSize: 11, color: "#484f58", fontFamily: "'JetBrains Mono',monospace" }}>{t}</span>;
+    });
+
+    /* ══════════════════════════════════
+       LOGIN
+    ══════════════════════════════════ */
+    function Login({ onLogin }) {
+      const [users, setUsers] = useState([]);
+      const [sel, setSel] = useState("");
+      const [loading, setLoading] = useState(true);
+      const [busy, setBusy] = useState(false);
+      const [err, setErr] = useState("");
+      useEffect(() => {
+        fetch(`${API}/api/analytics/users`).then(r => r.json())
+          .then(d => { setUsers(Array.isArray(d) ? d : []); setLoading(false); })
+          .catch(() => { setErr("Cannot connect to backend at localhost:8080"); setLoading(false); });
+      }, []);
+      const go = async () => {
+        if (!sel) { setErr("Select an account"); return; }
+        setBusy(true); setErr("");
+        try {
+          const r = await fetch(`${API}/api/v1/users/${sel}/role`);
+          const d = await r.json();
+          const u = users.find(x => x.user_id === sel);
+          onLogin({ userId: sel, role: d.role || "USER", name: u?.display_name || sel });
+        } catch { setErr("Verification failed. Is backend running?"); }
+        setBusy(false);
+      };
+      return (
+        <div style={{ flex: 1, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(ellipse 70% 40% at 50% 0%,rgba(31,111,235,.1),transparent 65%),#0d1117", padding: 24 }}>
+          <div style={{ width: "100%", maxWidth: 420 }} className="fade-up">
+            <div style={{ textAlign: "center", marginBottom: 32 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <div style={{ width: 50, height: 50, borderRadius: 12, background: "linear-gradient(135deg,#1f6feb,#a371f7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, boxShadow: "0 0 32px rgba(31,111,235,.4)" }}>🛡️</div>
+                <div style={{ textAlign: "left" }}>
+                  <div className="grad" style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-.5px" }}>PromptGuard</div>
+                  <div style={{ fontSize: 9, color: "#388bfd", letterSpacing: "3px", fontWeight: 700, marginTop: 2 }}>ENTERPRISE AI SECURITY</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: "#6e7681", lineHeight: 1.6 }}>Intelligent prompt security for enterprise AI workflows</p>
+            </div>
+            <div className="card" style={{ padding: "28px 24px", boxShadow: "0 24px 64px rgba(0,0,0,.7)" }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#e6edf3", marginBottom: 4 }}>Sign in to continue</div>
+              <div style={{ fontSize: 12, color: "#6e7681", marginBottom: 24 }}>Select your employee account</div>
+              {loading ? (
+                <div style={{ textAlign: "center", padding: "32px 0", color: "#6e7681" }}>
+                  <div className="sp" style={{ width: 24, height: 24, border: "2px solid #21262d", borderTopColor: "#388bfd", borderRadius: "50%", margin: "0 auto 12px" }} />
+                  <div style={{ fontSize: 12 }}>Loading accounts…</div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+                    {users.map(u => {
+                      const isA = u.role === "ADMIN", act = sel === u.user_id;
+                      return (
+                        <div key={u.user_id} onClick={() => { setSel(u.user_id); setErr(""); }}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 8, cursor: "pointer", background: act ? "rgba(31,111,235,.1)" : "rgba(255,255,255,.02)", border: `1.5px solid ${act ? "rgba(56,139,253,.5)" : "#30363d"}`, transition: "all .14s" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 8, background: isA ? "linear-gradient(135deg,#6e40c9,#a371f7)" : "linear-gradient(135deg,#1f6feb,#388bfd)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                              {isA ? "👑" : "👤"}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "#e6edf3" }}>
+                                {u.user_id === "kushal-user" ? "Telecomm" : u.user_id === "rohan-user" ? "Software" : u.display_name || u.user_id}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#6e7681", fontFamily: "'JetBrains Mono',monospace" }}>
+                                {u.user_id}
+                              </div>
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 20, letterSpacing: "1.5px", background: isA ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.12)", color: isA ? "#a371f7" : "#58a6ff", border: `1px solid ${isA ? "rgba(163,113,247,.3)" : "rgba(56,139,253,.25)"}` }}>{u.role}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {err && <div style={{ color: "#f85149", fontSize: 12, background: "rgba(218,54,51,.08)", border: "1px solid rgba(218,54,51,.25)", borderRadius: 7, padding: "9px 13px", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>⚠️ {err}</div>}
+                  <button className="btn btn-primary" onClick={go} disabled={!sel || busy}
+                    style={{ width: "100%", padding: "12px", fontSize: 14, background: sel ? "linear-gradient(135deg,#1f6feb,#388bfd)" : "rgba(255,255,255,.04)", boxShadow: sel ? "0 0 20px rgba(56,139,253,.35)" : "none", opacity: sel ? 1 : .4 }}>
+                    {busy ? "⏳ Verifying…" : "Sign In →"}
+                  </button>
+                </>
+              )}
+            </div>
+            <div style={{ textAlign: "center", fontSize: 11, color: "#21262d", marginTop: 14 }}>PromptGuard v1.0 · Enterprise AI Security</div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ══════════════════════════════════
+       STAT CARD
+    ══════════════════════════════════ */
+    const StatCard = memo(function StatCard({ label, value, icon, accentColor, borderColor, bgColor, sub, delay = 0 }) {
+      return (
+        <div className={`card card-hover stat-card fade-up d${delay}`}
+          style={{ "--sc-glow": `${accentColor}20`, padding: "16px 18px 14px", background: bgColor || "#161b22", borderBottom: `2px solid ${borderColor || accentColor}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#6e7681", letterSpacing: ".8px", textTransform: "uppercase", lineHeight: 1 }}>{label}</span>
+            <span style={{ fontSize: 18 }}>{icon}</span>
+          </div>
+          <div style={{ fontSize: 38, fontWeight: 800, color: "#e6edf3", lineHeight: 1, letterSpacing: "-1.5px", animation: `countIn .55s cubic-bezier(.22,1,.36,1) ${delay * 55}ms both` }}>
+            {value ?? 0}
+          </div>
+          {sub && <div style={{ fontSize: 11, color: accentColor, marginTop: 8, fontWeight: 500, opacity: .9 }}>{sub}</div>}
+        </div>
+      );
+    });
+
+    /* ══════════════════════════════════
+       LINE CHART
+    ══════════════════════════════════ */
+    const LineChart = memo(function LineChart({ logs }) {
+      const ref = useRef(), inst = useRef();
+      useEffect(() => {
+        if (!ref.current) return;
+        const days = [], labels = [];
+        for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toDateString()); labels.push(d.toLocaleDateString([], { month: "short", day: "numeric" })); }
+        const bkt = act => days.map(ds => logs.filter(l => { try { return new Date(l.timestamp || l.created_at).toDateString() === ds && l.action === act; } catch { return false; } }).length);
+        if (inst.current) { try { inst.current.destroy(); } catch { } }
+        inst.current = new Chart(ref.current, {
+          type: "line",
+          data: {
+            labels, datasets: [
+              { label: "Safe", data: bkt("ALLOW"), borderColor: "#3fb950", backgroundColor: "rgba(63,185,80,.08)", tension: .45, pointRadius: 5, pointBackgroundColor: "#3fb950", pointBorderColor: "#0d1117", pointBorderWidth: 2, fill: true, borderWidth: 2.5 },
+              { label: "Redacted", data: bkt("REDACT"), borderColor: "#a371f7", backgroundColor: "rgba(163,113,247,.08)", tension: .45, pointRadius: 5, pointBackgroundColor: "#a371f7", pointBorderColor: "#0d1117", pointBorderWidth: 2, fill: true, borderWidth: 2.5 }, // PURPLE
+              { label: "Blocked", data: bkt("BLOCK"), borderColor: "#f85149", backgroundColor: "rgba(248,81,73,.08)", tension: .45, pointRadius: 5, pointBackgroundColor: "#f85149", pointBorderColor: "#0d1117", pointBorderWidth: 2, fill: true, borderWidth: 2.5 },
+              { label: "Critical", data: bkt("ALERT"), borderColor: "#d29922", backgroundColor: "rgba(210,153,34,.08)", tension: .45, pointRadius: 5, pointBackgroundColor: "#d29922", pointBorderColor: "#0d1117", pointBorderWidth: 2, fill: true, borderWidth: 2.5 }, // YELLOW
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: { position: "bottom", labels: { color: "#8b949e", boxWidth: 10, padding: 18, font: { size: 11, family: "Inter" }, usePointStyle: true, pointStyleWidth: 10 } },
+              tooltip: { backgroundColor: "#1c2128", titleColor: "#e6edf3", bodyColor: "#8b949e", borderColor: "#30363d", borderWidth: 1, cornerRadius: 8, padding: 10, titleFont: { family: "Inter", weight: "600" }, bodyFont: { family: "Inter" } }
+            },
+            scales: { x: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#484f58", font: { size: 11, family: "Inter" } } }, y: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#484f58", font: { size: 11, family: "Inter" } }, beginAtZero: true } }
+          },
+        });
+        return () => { try { inst.current?.destroy(); } catch { } };
+      }, [logs]);
+      return <canvas ref={ref} style={{ width: "100%", height: "100%" }} />;
+    });
+
+    /* ══════════════════════════════════
+       DONUT CHART
+    ══════════════════════════════════ */
+    const DonutChart = memo(function DonutChart({ data }) {
+      const ref = useRef(), inst = useRef();
+      useEffect(() => {
+        if (!ref.current || !data?.length) return;
+        const COLS = ["#58a6ff", "#f85149", "#d29922", "#3fb950", "#a371f7", "#fb8f44", "#39d353", "#e879f9"];
+        const total = data.reduce((s, d) => s + nv(d.count), 0);
+        const pctPlug = {
+          id: "pct", afterDatasetsDraw(chart) {
+            const { ctx } = chart;
+            chart.data.datasets.forEach((ds, di) => {
+              chart.getDatasetMeta(di).data.forEach((arc, i) => {
+                const pct = total > 0 ? Math.round(nv(ds.data[i]) / total * 100) : 0;
+                if (pct < 6) return;
+                const mid = (arc.startAngle + arc.endAngle) / 2, r = (arc.innerRadius + arc.outerRadius) / 2;
+                ctx.save(); ctx.fillStyle = "#fff"; ctx.font = "bold 12px 'Inter',sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillText(`${pct}%`, arc.x + r * Math.cos(mid), arc.y + r * Math.sin(mid)); ctx.restore();
+              });
+            });
+          }
+        };
+        if (inst.current) { try { inst.current.destroy(); } catch { } }
+        inst.current = new Chart(ref.current, {
+          type: "doughnut",
+          data: { labels: data.map(d => d.riskType || "Unknown"), datasets: [{ data: data.map(d => nv(d.count)), backgroundColor: COLS, borderWidth: 3, borderColor: "#161b22", hoverOffset: 10 }] },
+          plugins: [pctPlug],
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: "52%",
+            plugins: {
+              legend: {
+                position: "right", labels: {
+                  color: "#ffffff", font: { size: 12, family: "Inter" }, padding: 10, boxWidth: 12,
+                  generateLabels: chart => { const ds = chart.data.datasets[0]; return chart.data.labels.map((l, i) => { const pct = total > 0 ? Math.round(nv(ds.data[i]) / total * 100) : 0; return { text: `${l}  ${pct}%`, fillStyle: COLS[i] || "#8b949e", hidden: false, index: i, lineWidth: 0, fontColor: "#ffffff" }; }); }
+                }
+              },
+              tooltip: { backgroundColor: "#1c2128", titleColor: "#e6edf3", bodyColor: "#8b949e", borderColor: "#30363d", borderWidth: 1, cornerRadius: 8, callbacks: { label: ctx => { const pct = total > 0 ? Math.round(nv(ctx.raw) / total * 100) : 0; return ` ${ctx.label}: ${ctx.raw} (${pct}%)`; } } }
+            }
+          },
+        });
+        return () => { try { inst.current?.destroy(); } catch { } };
+      }, [data]);
+      if (!data?.length) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#484f58", fontSize: 13 }}>No risk data yet</div>;
+      return <canvas ref={ref} style={{ width: "100%", height: "100%" }} />;
+    });
+
+    /* ══════════════════════════════════
+       BAR CHART
+    ══════════════════════════════════ */
+    const BarChart = memo(function BarChart({ data, isAiToolChart }) {
+      const ref = useRef(), inst = useRef();
+      const C = {
+        ChatGPT: "#3fb950", Copilot: "#58a6ff", Claude: "#a371f7", Gemini: "#d29922", DeepSeek: "#e879f9", Perplexity: "#22d3ee", PopupTest: "#39d353", DashboardTest: "#f85149", Unknown: "#484f58", Others: "#6e7681",
+        ALLOW: "#3fb950", REDACT: "#a371f7", BLOCK: "#f85149", ALERT: "#d29922"
+      };  // REDACT=purple, ALERT=yellow
+      const DEFAULT_TOOLS = ["ChatGPT", "Copilot", "Gemini", "Claude"];
+      useEffect(() => {
+        if (!ref.current) return;
+        let toolData = [...(data || [])];
+        if (isAiToolChart) { const foundTools = toolData.map(d => d.tool); DEFAULT_TOOLS.forEach(dt => { if (!foundTools.includes(dt)) toolData.push({ tool: dt, count: 0 }); }); }
+        toolData.sort((a, b) => (b.count || 0) - (a.count || 0));
+        const labels = toolData.map(d => d.tool || "Unknown"), counts = toolData.map(d => nv(d.count)), colors = labels.map(l => C[l] || "#484f58");
+        if (inst.current) { try { inst.current.destroy(); } catch { } }
+        inst.current = new Chart(ref.current, {
+          type: "bar",
+          data: { labels, datasets: [{ data: counts, backgroundColor: colors.map(c => c + "bb"), borderColor: colors, borderRadius: 7, borderSkipped: false, maxBarThickness: 52, borderWidth: 1 }] },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { display: true, position: "bottom", labels: { color: "#ffffff", font: { size: 11, family: "Inter" }, padding: 14, boxWidth: 10, generateLabels: chart => chart.data.labels.map((l, i) => ({ text: l, fillStyle: colors[i], hidden: false, index: i, lineWidth: 0, fontColor: "#ffffff" })) } },
+              tooltip: { backgroundColor: "#1c2128", titleColor: "#e6edf3", bodyColor: "#8b949e", borderColor: "#30363d", borderWidth: 1, cornerRadius: 8, titleFont: { family: "Inter" }, bodyFont: { family: "Inter" } }
+            },
+            scales: { x: { grid: { display: false }, ticks: { color: "#ffffff", font: { size: 11, family: "Inter" } } }, y: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#ffffff", font: { size: 11, family: "Inter" } }, beginAtZero: true } }
+          },
+        });
+        return () => { try { inst.current?.destroy(); } catch { } };
+      }, [data]);
+      return <canvas ref={ref} style={{ width: "100%", height: "100%" }} />;
+    });
+
+    /* ══════════════════════════════════
+       BADGE  — colors driven by AC map above
+    ══════════════════════════════════ */
+    function Badge({ action }) {
+      const c = AC[action] || AC.ALLOW;
+      return (
+        <span className="badge" style={{ background: c.bg, border: `1px solid ${c.bd}`, color: c.tx }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.tx, display: "inline-block", flexShrink: 0, boxShadow: `0 0 5px ${c.tx}88` }} />
+          {c.l}
+        </span>
+      );
+    }
+
+    function CH({ icon, title, right, sub }) {
+      return (
+        <div style={{ padding: "14px 18px 12px", borderBottom: "1px solid #21262d", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 15 }}>{icon}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#e6edf3" }}>{title}</span>
+            {right && <span style={{ marginLeft: "auto", fontSize: 11, color: "#6e7681", fontFamily: "'JetBrains Mono',monospace" }}>{right}</span>}
+          </div>
+          {sub && <div style={{ fontSize: 11, color: "#6e7681", marginTop: 3, paddingLeft: 23 }}>{sub}</div>}
+        </div>
+      );
+    }
+
+    function Comply({ label, status }) {
+      const ok = status === "Compliant", warn = status === "Needs Review";
+      const cls = ok ? "comply-ok" : warn ? "comply-warn" : "comply-bad";
+      const ic = ok ? "✅" : warn ? "⚠️" : "❌";
+      const col = ok ? "#3fb950" : warn ? "#d29922" : "#f85149";
+      return (
+        <div className={`card ${cls}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", flex: 1, minWidth: 150, borderRadius: 8 }}>
+          <span style={{ fontSize: 16 }}>{ic}</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#e6edf3" }}>{label}</div>
+            <div style={{ fontSize: 11, color: col, fontWeight: 600, marginTop: 2 }}>{ok ? "✓ Compliant" : warn ? "! Needs Review" : "✗ Non-Compliant"}</div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ══════════════════════════════════
+       TEST PANEL
+    ══════════════════════════════════ */
+    function TestPanel({ userId, onDone }) {
+      const [prompt, setPrompt] = useState("");
+      const [busy, setBusy] = useState(false);
+      const [result, setResult] = useState(null);
+      const run = async () => {
+        if (!prompt.trim()) return;
+        setBusy(true); setResult(null);
+        try {
+          const r = await fetch(`${API}/api/v1/prompts`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, tool: "DashboardTest", browserName: "Dashboard", prompt: prompt.trim(), testing: true, timestamp: new Date().toISOString().slice(0, 19) })
+          });
+          setResult(await r.json()); if (onDone) onDone();
+        } catch { setResult({ action: "ERROR", reason: "Connection failed." }); }
+        setBusy(false);
+      };
+      const c = result ? (AC[result.action] || AC.ALLOW) : null;
+      return (
+        <div className="card fade-up" style={{ padding: 24, maxWidth: 640 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 9, background: "rgba(56,139,253,.12)", border: "1px solid rgba(56,139,253,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🧪</div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#e6edf3" }}>Test a Prompt</div>
+              <div style={{ fontSize: 11, color: "#6e7681" }}>Run a prompt through the security engine in real-time</div>
+            </div>
+          </div>
+          <textarea value={prompt} onChange={e => setPrompt(e.target.value)}
+            placeholder={"Try these:\n• SELECT * FROM users WHERE password='admin'\n• My SSN is 123-45-6789\n• AWS_KEY=AKIAIOSFODNN7EXAMPLE\n• How do I reverse a string in Python?"}
+            style={{ width: "100%", background: "#0d1117", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 8, padding: "12px 14px", fontSize: 13, minHeight: 120, resize: "vertical", outline: "none", fontFamily: "'Inter',sans-serif", lineHeight: 1.7, transition: "border-color .2s" }}
+            onFocus={e => e.target.style.borderColor = "#388bfd"} onBlur={e => e.target.style.borderColor = "#30363d"} />
+          <button className="btn btn-primary" onClick={run} disabled={busy || !prompt.trim()}
+            style={{ marginTop: 12, padding: "11px 24px", fontSize: 13, background: (!busy && prompt.trim()) ? "linear-gradient(135deg,#1f6feb,#388bfd)" : "rgba(255,255,255,.04)", boxShadow: (!busy && prompt.trim()) ? "0 0 16px rgba(56,139,253,.3)" : "none", opacity: (!busy && prompt.trim()) ? 1 : .4 }}>
+            {busy ? "⏳ Analyzing…" : "⚡ Check Prompt"}
+          </button>
+          {result && c && (
+            <div className="fade-up" style={{ marginTop: 18, padding: "16px 18px", borderRadius: 9, background: c.bg, border: `1px solid ${c.bd}` }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: c.tx, marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
+                <span>{result.action === "ALLOW" ? "✅" : result.action === "BLOCK" ? "🚫" : result.action === "REDACT" ? "✏️" : "⚡"}</span>
+                <span>{result.action}</span>
+                {result.riskScore != null && <span style={{ marginLeft: "auto", fontSize: 12, color: "#8b949e", fontWeight: 500 }}>Risk: <strong style={{ color: c.tx }}>{result.riskScore}/100</strong></span>}
+              </div>
+              <div style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.7 }}>{result.reason}
+                {result.processingTimeMs != null && <span style={{ marginLeft: 8, opacity: .6, fontFamily: "'JetBrains Mono',monospace" }}>· {result.processingTimeMs}ms</span>}
+              </div>
+              {result.action === "REDACT" && result.redactedPrompt && (
+                <div style={{ marginTop: 10, background: "#0d1117", border: "1px solid #21262d", borderRadius: 7, padding: "9px 12px", color: "#a371f7", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, wordBreak: "break-all" }}>
+                  <span style={{ color: "#484f58", marginRight: 8 }}>REDACTED:</span>{result.redactedPrompt}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ══════════════════════════════════
+       ABadge helper (keyword policy rows)
+       REDACT → purple palette
+       CRITICAL → yellow/amber palette
+    ══════════════════════════════════ */
+    const ABadge = (p) => {
+      if (p.blockCol || p.block_col) return { label: "BLOCK", bg: "#7f1d1d", color: "#fca5a5", border: "#991b1b" };
+      if (p.criticalCol || p.critical_col) return { label: "CRITICAL", bg: "#3b2800", color: "#fcd34d", border: "#92400e" };  // YELLOW
+      if (p.redactedCol || p.redacted_col) return { label: "REDACT", bg: "#2e1a4a", color: "#c4b5fd", border: "#6d28d9" };  // PURPLE
+      if (p.allowCol || p.allow_col) return { label: "ALLOW", bg: "#14532d", color: "#86efac", border: "#166534" };
+      return { label: "NONE", bg: "#1e293b", color: "#94a3b8", border: "#334155" };
+    };
+
+    /* ══════════════════════════════════
+       PROMPT MODAL
+    ══════════════════════════════════ */
+    function PromptModal({ log, onClose, Badge }) {
+      const theme = getTheme(log.action);
+      const promptText = log.originalPrompt || log.original_prompt || log.prompt || log.promptText || log.prompt_text || null;
+      const redactedText = log.redactedPrompt || log.redacted_prompt || null;
+      const showRedacted = (log.action === "REDACT") && redactedText && redactedText !== promptText;
+
+      return ReactDOM.createPortal(
+        <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 999999, background: "rgba(0,0,0,.78)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifySelf: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter',sans-serif" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 14, maxWidth: 560, width: "100%", boxShadow: "0 32px 80px rgba(0,0,0,.9)", overflow: "hidden", animation: "modalIn .18s ease" }}>
+            {/* removed coloured top bar */}
+
+            {/* header — badge colour matches action */}
+            <div style={{ padding: "14px 20px", background: "#0d1117", borderBottom: "1px solid #30363d", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 16 }}>📝</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#f0f6fc", letterSpacing: "-.2px" }}>Prompt Details</span>
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+                {/* Modal top-right badge — keeping colorfulness ONLY here as requested */}
+                <Badge action={log.action} />
+                <button onClick={onClose} style={{ background: "rgba(255,255,255,.03)", border: "1px solid #30363d", color: "#8b949e", cursor: "pointer", fontSize: 16, lineHeight: 1, borderRadius: 6, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              </div>
+            </div>
+
+            {/* body */}
+            <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                {[
+                  ["User", log.userId || log.user_id || "—"],
+                  ["Tool", log.tool || "—"],
+                  ["Browser", log.browserName || log.browser_name || "—"],
+                  ["Risk Score", String(log.riskScore ?? log.risk_score ?? 0)],
+                  ["Risk Type", log.highestRiskType || log.highest_risk_type || "NONE"],
+                  ["Time", (log.timestamp || log.created_at || "—").replace("T", " ").replace(/\.\d+.*/, "")],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ background: "rgba(0,0,0,.2)", borderRadius: 8, padding: "8px 11px", border: "1px solid #30363d" }}>
+                    <div style={{ fontSize: 9, color: "#6e7681", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 3 }}>{k}</div>
+                    <div style={{ fontSize: 12, color: "#f0f6fc", fontWeight: 600, wordBreak: "break-all" }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* original prompt */}
+              <div style={{ background: "rgba(0,0,0,.2)", borderRadius: 10, overflow: "hidden", border: "1px solid #30363d" }}>
+                <div style={{ padding: "8px 14px", background: "#0d1117", borderBottom: "1px solid #30363d", fontSize: 10, color: "#6e7681", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px" }}>Original Prompt</div>
+                <div style={{ padding: "12px 14px", fontSize: 12, color: promptText ? "#f0f6fc" : "#484f58", fontFamily: "'JetBrains Mono',monospace", lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 180, overflowY: "auto", fontStyle: promptText ? "normal" : "italic" }}>
+                  {promptText || "Prompt text not stored — restart the backend and send a new prompt."}
+                </div>
+              </div>
+
+              {/* redacted version */}
+              {showRedacted && (
+                <div style={{ background: "rgba(0,0,0,.2)", borderRadius: 10, overflow: "hidden", border: "1px solid #30363d" }}>
+                  <div style={{ padding: "8px 14px", background: "#0d1117", borderBottom: "1px solid #30363d", fontSize: 10, color: theme.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", display: "flex", alignItems: "center", gap: 6 }}>✏️ Redacted Version</div>
+                  <div style={{ padding: "12px 14px", fontSize: 12, color: "#f0f6fc", fontFamily: "'JetBrains Mono',monospace", lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 150, overflowY: "auto" }}>
+                    {redactedText}
+                  </div>
+                </div>
+              )}
+
+              {/* action reason */}
+              <div style={{ background: "rgba(0,0,0,.2)", borderRadius: 10, overflow: "hidden", border: "1px solid #30363d" }}>
+                <div style={{ padding: "8px 14px", background: "#0d1117", borderBottom: "1px solid #30363d", fontSize: 10, color: "#6e7681", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px" }}>Action Reason</div>
+                <div style={{ padding: "12px 14px", fontSize: 12, color: "#8b949e", lineHeight: 1.65 }}>
+                  {log.actionReason || log.action_reason || "No reason provided."}
+                </div>
+              </div>
+
+              <button onClick={onClose}
+                style={{ marginTop: 4, padding: "9px", borderRadius: 8, cursor: "pointer", background: "rgba(255,255,255,.03)", border: "1px solid #30363d", color: "#8b949e", fontSize: 12, fontWeight: 700, fontFamily: "inherit", transition: "all .15s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#58a6ff"; e.currentTarget.style.color = "#58a6ff"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#30363d"; e.currentTarget.style.color = "#8b949e"; }}>Close</button>
+            </div>
+          </div>
+          <style>{`@keyframes modalIn{from{opacity:0;transform:scale(.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}`}</style>
+        </div>,
+        document.body
+      );
+    }
+
+    /* ══════════════════════════════════
+       ALL LOGS TAB
+    ══════════════════════════════════ */
+    function AllLogsTab({ logs, isA, filter, handleFilter, users, logActionFilter, setLogActionFilter, fmtAge, nv, Badge }) {
+      const [promptModal, setPromptModal] = useState(null);
+
+      const ACTION_FILTERS = [
+        { val: "ALL", label: "All", color: "#8b949e", activeBg: "#21262d", activeBorder: "#8b949e" },
+        { val: "ALLOW", label: "✅ Safe", color: "#3fb950", activeBg: "rgba(46,160,67,.15)", activeBorder: "#3fb950" },
+        { val: "REDACT", label: "✏️ Redacted", color: "#a371f7", activeBg: "rgba(163,113,247,.15)", activeBorder: "#a371f7" },  // PURPLE
+        { val: "BLOCK", label: "🚫 Blocked", color: "#f85149", activeBg: "rgba(248,81,73,.15)", activeBorder: "#f85149" },
+        { val: "ALERT", label: "⚡ Critical", color: "#d29922", activeBg: "rgba(210,153,34,.12)", activeBorder: "#d29922" },  // YELLOW
+      ];
+
+      const actionFilteredLogs = logActionFilter === "ALL" ? logs : logs.filter(l => l.action === logActionFilter);
+
+      return (
+        <div className="fade-up">
+          {promptModal && <PromptModal log={promptModal} onClose={() => setPromptModal(null)} Badge={Badge} />}
+
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+            <div>
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: "#e6edf3" }}>{isA ? "All Audit Logs" : "My Prompt Logs"}</h1>
+              <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>{isA ? `${actionFilteredLogs.length} record${actionFilteredLogs.length !== 1 ? "s" : ""} — all users` : `${actionFilteredLogs.length} records — your prompts only`}</p>
+            </div>
+            {isA && (
+              <select value={filter} onChange={e => handleFilter(e.target.value)}
+                style={{ marginLeft: "auto", background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 8, padding: "7px 12px", fontSize: 12, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                <option value="ALL">All Users</option>
+                {users.map(u => <option key={u.user_id} value={u.user_id}>{u.display_name || u.user_id}</option>)}
+              </select>
+            )}
+          </div>
+
+          {/* action filter bar */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: "#484f58", fontWeight: 600, marginRight: 2 }}>🔽 Filter:</span>
+            {ACTION_FILTERS.map(({ val, label, color, activeBg, activeBorder }) => {
+              const isActive = logActionFilter === val;
+              return (
+                <button key={val} onClick={() => setLogActionFilter(val)} style={{ padding: "4px 13px", borderRadius: 20, fontSize: 11, cursor: "pointer", fontWeight: isActive ? 700 : 500, border: `1px solid ${isActive ? activeBorder : "#30363d"}`, background: isActive ? activeBg : "#0d1117", color: isActive ? color : "#8b949e", transition: "all .15s", fontFamily: "inherit" }}>{label}</button>
+              );
+            })}
+            {logActionFilter !== "ALL" && (
+              <button onClick={() => setLogActionFilter("ALL")} style={{ padding: "4px 10px", borderRadius: 20, fontSize: 11, cursor: "pointer", background: "none", border: "1px solid #30363d", color: "#484f58", fontFamily: "inherit" }}>✕ Clear</button>
+            )}
+          </div>
+
+          <div className="card" style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: "rgba(0,0,0,.3)" }}>
+                  {(isA ? ["Time", "User", "Tool", "Browser", "Risk Type", "Score", "Action", "Reason", "Prompt"] : ["Time", "Tool", "Browser", "Risk Type", "Score", "Action", "Reason", "Prompt"]).map(h => (
+                    <th key={h} style={{ padding: "10px 14px", textAlign: "left", color: "#6e7681", fontWeight: 600, fontSize: 10, letterSpacing: ".8px", textTransform: "uppercase", whiteSpace: "nowrap", borderBottom: "1px solid #21262d" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {actionFilteredLogs.length === 0 ? (
+                  <tr><td colSpan={10} style={{ padding: "48px", textAlign: "center", color: "#484f58" }}>
+                    <div style={{ fontSize: 26, marginBottom: 10 }}>📭</div>
+                    <div style={{ fontSize: 13, color: "#6e7681" }}>{logs.length === 0 ? "No logs yet." : "No logs match the selected filter."}</div>
+                  </td></tr>
+                ) : actionFilteredLogs.map((l, i) => {
+                  const theme = getTheme(l.action);
+                  return (
+                    <tr key={i} className="tr-hover" style={{ borderBottom: "1px solid rgba(255,255,255,.025)" }}>
+                      <td style={{ padding: "9px 14px", color: "#6e7681", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, whiteSpace: "nowrap" }}>{fmtAge(l.timestamp || l.created_at)}</td>
+                      {isA && <td style={{ padding: "9px 14px", color: "#79c0ff", fontWeight: 600 }}>{l.userId || l.user_id || "—"}</td>}
+                      <td style={{ padding: "9px 14px" }}>
+                        <span style={{ background: "rgba(56,139,253,.1)", border: "1px solid rgba(56,139,253,.2)", color: "#58a6ff", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>{l.tool || "—"}</span>
+                      </td>
+                      <td style={{ padding: "9px 14px", color: "#3fb950", fontWeight: 600 }}>{l.browserName || l.browser_name || "—"}</td>
+                      <td style={{ padding: "9px 14px" }}>
+                        <span style={{ display: "inline-block", padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, letterSpacing: ".5px", background: "rgba(255,255,255,.05)", color: "#c9d1d9" }}>{l.highestRiskType || l.highest_risk_type || "NONE"}</span>
+                      </td>
+                      <td style={{ padding: "9px 14px", fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, textAlign: "center", color: (AC[l.action] || AC.ALLOW).tx }}>
+                        {l.riskScore ?? l.risk_score ?? 0}
+                      </td>
+                      <td style={{ padding: "9px 14px" }}><Badge action={l.action} /></td>
+                      <td style={{ padding: "9px 14px", color: "#6e7681", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.actionReason || l.action_reason || "—"}</td>
+                      <td style={{ padding: "9px 14px", textAlign: "center" }}>
+                        <button onClick={() => setPromptModal(l)} title="View prompt"
+                          style={{ background: theme.accent + "18", border: `1px solid ${theme.accent}44`, color: theme.accent, borderRadius: 6, padding: "4px 9px", cursor: "pointer", fontSize: 13, lineHeight: 1, transition: "all .15s", fontFamily: "inherit", fontWeight: 700 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = theme.accent + "35"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = theme.accent + "18"; }}>📄</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    /* ══════════════════════════════════
+       USER KEYWORDS PAGE  (non-admin)
+    ══════════════════════════════════ */
+    function UserKeywordsPage({ userId, API }) {
+      const [policies, setPolicies] = useState([]);
+      const [loading, setLoading] = useState(true);
+      useEffect(() => {
+        setLoading(true);
+        fetch(`${API}/api/v1/policies?userId=${userId}`).then(r => r.json()).then(d => { setPolicies(Array.isArray(d) ? d : []); setLoading(false); }).catch(() => setLoading(false));
+      }, [userId]);
+      const buckets = { BLOCK: [], CRITICAL: [], REDACT: [] };
+      policies.forEach(p => {
+        const b = ABadge(p);
+        const kws = (p.keywordList || p.keyword_list || "").split(",").map(k => k.trim()).filter(Boolean);
+        if (buckets[b.label]) kws.forEach(kw => { if (!buckets[b.label].includes(kw)) buckets[b.label].push(kw); });
+      });
+      const thS = { padding: "9px 14px", fontSize: 10, color: "#6e7681", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", borderBottom: "1px solid #21262d", textAlign: "left" };
+      const tdS = { padding: "9px 14px", fontSize: 12, color: "#c9d1d9", borderBottom: "1px solid rgba(255,255,255,.03)", verticalAlign: "middle" };
+      if (loading) return <div style={{ color: "#6e7681", fontSize: 13, padding: "40px 0", textAlign: "center" }}><div className="sp" style={{ width: 20, height: 20, border: "2px solid #21262d", borderTopColor: "#58a6ff", borderRadius: "50%", margin: "0 auto 12px" }} />Loading your keyword policies...</div>;
+      return (
+        <div className="fade-up">
+          <div style={{ marginBottom: 22 }}>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: "#e6edf3" }}>My Keyword Policies</h1>
+            <p style={{ fontSize: 12, color: "#6e7681", marginTop: 4 }}>
+              All keyword rules applied to your organisation: <span style={{ color: "#58a6ff", fontWeight: 600 }}>{policies.length > 0 && policies[0].orgName ? policies[0].orgName : userId}</span>.
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 22 }}>
+            {[
+              { label: "Total Rules", val: policies.length, icon: "📋", color: "#58a6ff", bg: "#0d1b2e", border: "#1f6feb33" },
+              { label: "Block Rules", val: policies.filter(p => p.blockCol || p.block_col).length, icon: "🚫", color: "#fca5a5", bg: "#2d0a0a", border: "#991b1b33" },
+              { label: "Critical Rules", val: policies.filter(p => p.criticalCol || p.critical_col).length, icon: "⚡", color: "#fcd34d", bg: "#1a0d00", border: "#92400e33" },
+              { label: "Redact Rules", val: policies.filter(p => p.redactedCol || p.redacted_col).length, icon: "✏️", color: "#c4b5fd", bg: "#1a0a30", border: "#6d28d933" },
+            ].map(s => (
+              <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 9, padding: "14px 16px" }}>
+                <div style={{ fontSize: 10, color: "#6e7681", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".6px", marginBottom: 6 }}>{s.icon} {s.label}</div>
+                <div style={{ fontSize: 30, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: 10, marginBottom: 20, overflow: "hidden" }}>
+            <div style={{ padding: "10px 16px", background: "#0d1117", borderBottom: "1px solid #21262d" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>🔑 Keywords by action type</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+              {[
+                { act: "BLOCK", icon: "🚫", bg: "#7f1d1d", color: "#fca5a5", border: "#991b1b", chipBg: "#3d0808" },
+                { act: "CRITICAL", icon: "⚡", bg: "#3b2800", color: "#fcd34d", border: "#92400e", chipBg: "#2a1000" },
+                { act: "REDACT", icon: "✏️", bg: "#2e1a4a", color: "#c4b5fd", border: "#6d28d9", chipBg: "#1a0a30" },
+              ].map(({ act, icon, bg, color, border, chipBg }) => {
+                const kws = buckets[act];
+                return (
+                  <div key={act} style={{ padding: "16px", borderRight: "1px solid #21262d", borderBottom: "1px solid #21262d" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                      <span style={{ background: bg, color, border: `1px solid ${border}`, borderRadius: 5, padding: "3px 12px", fontSize: 11, fontWeight: 700 }}>{icon} {act}</span>
+                      <span style={{ fontSize: 10, color: "#6e7681" }}>{kws.length} keyword{kws.length !== 1 ? "s" : ""}</span>
+                    </div>
+                    {kws.length === 0
+                      ? <div style={{ fontSize: 11, color: "#484f58", fontStyle: "italic" }}>No {act.toLowerCase()} keywords</div>
+                      : <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {kws.map(kw => (
+                          <span key={kw} style={{ background: chipBg, border: `1px solid ${border}55`, color, borderRadius: 5, padding: "3px 10px", fontSize: 11, fontFamily: "'JetBrains Mono',monospace" }}>
+                            {kw === "*" ? "* (all)" : kw}
+                          </span>
+                        ))}
+                      </div>
+                    }
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/*
+          ═══════════════════════════════════════════════════════════════════
+          COMMENTED OUT: "All policies for {userId}" full table
+          (ID / Sub-user / Keyword List / Action / Description rows for
+           rohan-user and kushal-user)
+          ═══════════════════════════════════════════════════════════════════
+          */}
+        </div>
+      );
+    }
+
+    /* ══════════════════════════════════
+       KEYWORD POLICIES PANEL  (admin)
+
+       Layout:
+         1. Add New Keyword Policy form   ← TOP
+         [ everything below is commented out as requested ]
+    ══════════════════════════════════ */
+    function KeywordPoliciesPanel({ API }) {
+      const [policies, setPolicies] = useState([]);
+      const [loading, setLoading] = useState(true);
+      /* orgFilter: "ALL" | "kushal-user" | "rohan-user" | ... */
+      const [orgFilter, setOrgFilter] = useState("ALL");
+      const [form, setForm] = useState({
+        userId: "", subUser: "", keywordList: "",
+        blockCol: false, criticalCol: false, redactedCol: false, promptCol: ""
+      });
+      const [saving, setSaving] = useState(false);
+      const [msg, setMsg] = useState(null);
+      /* userId → orgName map for display (e.g. "kushal-user" → "Telecomm") */
+      const [userOrgMap, setUserOrgMap] = useState({});
+
+      const load = () => {
+        setLoading(true);
+        Promise.all([
+          fetch(`${API}/api/v1/policies`).then(r => r.json()),
+          fetch(`${API}/api/v1/users`).then(r => r.json()),
+        ]).then(([pols, users]) => {
+          setPolicies(Array.isArray(pols) ? pols : []);
+          /* Build map: userId → orgName */
+          const map = {};
+          if (Array.isArray(users)) {
+            users.forEach(u => {
+              const uid = u.userId || u.user_id;
+              const oName = u.orgName || u.org_name || u.organizationName;
+              const oId = u.orgId || u.org_id || u.organizationId;
+              if (oName) {
+                if (uid) map[uid] = oName;
+                if (oId) map[String(oId)] = oName;
+              }
+            });
+          }
+          setUserOrgMap(map);
+          setLoading(false);
+        }).catch(() => setLoading(false));
+      };
+      useEffect(() => { load(); }, []);
+
+      /* Returns orgName if known, otherwise falls back to userId */
+      const orgLabel = (userId) => userOrgMap[userId] || userId;
+
+      /* Derive distinct orgs from ALL policies */
+      const allOrgs = [...new Set(policies.map(p => p.userId || p.user_id))].filter(Boolean).sort();
+
+      /* Policies visible in this view = filtered by org */
+      const visiblePolicies = orgFilter === "ALL"
+        ? policies
+        : policies.filter(p => (p.userId || p.user_id) === orgFilter);
+
+      const handleSave = async () => {
+        if (!form.userId.trim() || !form.subUser.trim() || !form.keywordList.trim()) {
+          setMsg("❌ userId, subUser and keywordList are required"); return;
+        }
+        if (!form.blockCol && !form.critialCol && !form.redactedCol) {
+          setMsg("❌ Select at least one action column"); return;
+        }
+        setSaving(true);
+        try {
+          const res = await fetch(`${API}/api/v1/policies`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+          if (!res.ok) throw new Error("Failed");
+          setMsg("✅ Policy saved");
+          setForm({ userId: "", subUser: "", keywordList: "", blockCol: false, critialCol: false, redactedCol: false, promptCol: "" });
+          load();
+        } catch { setMsg("❌ Save failed"); }
+        setSaving(false);
+        setTimeout(() => setMsg(null), 3000);
+      };
+
+      const inputS = { width: "100%", boxSizing: "border-box", background: "#0d1117", border: "1px solid #30363d", borderRadius: 6, padding: "7px 10px", color: "#e6edf3", fontSize: 12, outline: "none", fontFamily: "inherit" };
+      const cardStyle = { background: "#161b22", border: "1px solid #21262d", borderRadius: 10, marginBottom: 16, overflow: "hidden" };
+
+      /* ── Keyword reference table (top of page) ── */
+      /* Build buckets per visible org */
+      const byOrg = {};
+      visiblePolicies.forEach(p => {
+        const org = p.userId || p.user_id; if (!org) return;
+        if (!byOrg[org]) byOrg[org] = { BLOCK: [], CRITICAL: [], REDACT: [] };
+        const b = ABadge(p);
+        if (!byOrg[org][b.label]) return;
+        const kws = (p.keywordList || p.keyword_list || "").split(",").map(k => k.trim()).filter(Boolean);
+        kws.forEach(kw => {
+          // Only add unique keywords to each bucket per org
+          const exists = byOrg[org][b.label].find(item => item.kw.toLowerCase() === kw.toLowerCase());
+          if (!exists) {
+            byOrg[org][b.label].push({ kw, policyId: p.id, allKws: kws, policyObj: p });
+          }
+        });
+      });
+
+      const handleDeleteKw = async (policyId, kwToRemove, _allKws, _policyObj) => {
+        try {
+          // Remove the keyword from ALL policies for this org that contain it
+          // This ensures "only 1 times allowed" in the display and database
+          const policiesFound = policies.filter(p => (p.keywordList || p.keyword_list || "").toLowerCase().includes(kwToRemove.toLowerCase()));
+          
+          for (const p of policiesFound) {
+            const pid = p.id;
+            const currentKws = (p.keywordList || p.keyword_list || "").split(",").map(k => k.trim()).filter(Boolean);
+            const remaining = currentKws.filter(k => k.toLowerCase() !== kwToRemove.toLowerCase());
+            
+            // Delete old policy
+            await fetch(`${API}/api/v1/policies/${pid}`, { method: "DELETE" });
+            
+            // If there's anything left, re-insert
+            if (remaining.length > 0) {
+              const body = { 
+                userId: p.userId || p.user_id, 
+                subUser: p.subUser || p.sub_user, 
+                keywordList: remaining.join(","), 
+                blockCol: p.blockCol || p.block_col || false, 
+                criticalCol: p.criticalCol || p.critical_col || false, 
+                redactedCol: p.redactedCol || p.redacted_col || false, 
+                allowCol: p.allowCol || p.allow_col || false,
+                promptCol: p.promptCol || p.prompt_col || "" 
+              };
+              await fetch(`${API}/api/v1/policies`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+            }
+          }
+        } catch (e) { console.error("Delete keyword failed", e); }
+        load();
+      };
+
+      const BUCKETS = [
+        { act: "BLOCK", icon: "🚫", bg: "#7f1d1d", color: "#fca5a5", border: "#991b1b", chipBg: "#3d0808" },
+        { act: "CRITICAL", icon: "⚡", bg: "#3b2800", color: "#fcd34d", border: "#92400e", chipBg: "#2a1000" },  // YELLOW
+        { act: "REDACT", icon: "✏️", bg: "#2e1a4a", color: "#c4b5fd", border: "#6d28d9", chipBg: "#1a0a30" },  // PURPLE
+      ];
+
+      const thStyle = { padding: "8px 12px", fontSize: 11, color: "#6e7681", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #21262d", textAlign: "left" };
+      const tdStyle = { padding: "8px 12px", fontSize: 12, color: "#c9d1d9", borderBottom: "1px solid #161b22", verticalAlign: "middle" };
+
+      return (
+        <div className="fade-up">
+          <div style={{ marginBottom: 16 }}>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: "#e6edf3" }}>Keyword Policies</h1>
+            <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>
+              Manage org-specific keyword rules. Each org's list is fully isolated.
+            </p>
+          </div>
+
+          {/* ── ORGANISATION FILTER BAR ── */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 700, marginRight: 2 }}>🏢 Org:</span>
+            {["ALL", ...allOrgs].map(org => (
+              <button key={org} onClick={() => setOrgFilter(org)}
+                style={{
+                  padding: "5px 16px", borderRadius: 20, fontSize: 12, cursor: "pointer", fontWeight: orgFilter === org ? 700 : 500,
+                  border: `1.5px solid ${orgFilter === org ? "#58a6ff" : "#30363d"}`,
+                  background: orgFilter === org ? "rgba(88,166,255,.12)" : "#0d1117",
+                  color: orgFilter === org ? "#58a6ff" : "#8b949e",
+                  transition: "all .15s", fontFamily: "inherit"
+                }}>
+                {org === "ALL" ? "🌐 All" : orgLabel(org)}
+              </button>
+            ))}
+          </div>
+
+          {/* ── KEYWORD REFERENCE CHIPS ── */}
+          {!loading && Object.keys(byOrg).length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              {Object.keys(byOrg).sort().map(org => (
+                <div key={org} style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: 10, marginBottom: 14, overflow: "hidden" }}>
+                  <div style={{ padding: "9px 16px", background: "#0d1117", borderBottom: "1px solid #21262d", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#58a6ff" }}>{orgLabel(org)}</span>
+                    <span style={{ fontSize: 11, color: "#6e7681" }}>keyword reference</span>
+                    <span style={{ fontSize: 10, color: "#484f58", marginLeft: "auto" }}>click × on a keyword to remove it</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
+                    {BUCKETS.map(({ act, icon, bg, color, border, chipBg }) => {
+                      const items = byOrg[org][act] || [];
+                      return (
+                        <div key={act} style={{ padding: "12px 14px", borderRight: "1px solid #21262d" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                            <span style={{ background: bg, color, border: `1px solid ${border}`, borderRadius: 5, padding: "2px 9px", fontSize: 10, fontWeight: 700 }}>{icon} {act}</span>
+                            <span style={{ fontSize: 10, color: "#484f58" }}>{items.length}</span>
+                          </div>
+                          {items.length === 0
+                            ? <span style={{ fontSize: 11, color: "#484f58", fontStyle: "italic" }}>none</span>
+                            : <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                              {items.map((item, i) => (
+                                <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: chipBg, border: `1px solid ${border}66`, color, borderRadius: 5, padding: "2px 7px 2px 8px", fontSize: 11, fontFamily: "'JetBrains Mono',monospace" }}>
+                                  {item.kw === "*" ? "* (all)" : item.kw}
+                                  <button onClick={() => handleDeleteKw(item.policyId, item.kw, item.allKws, item.policyObj)}
+                                    style={{ background: "none", border: "none", color, cursor: "pointer", padding: "0 0 0 2px", fontSize: 12, lineHeight: 1, opacity: .6, fontFamily: "inherit" }}>×</button>
+                                </span>
+                              ))}
+                            </div>
+                          }
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── ADD NEW KEYWORD POLICY FORM ── */}
+          <div style={{ ...cardStyle, marginBottom: 20 }}>
+            <div style={{ padding: "10px 16px", background: "#0d1117", borderBottom: "1px solid #21262d" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#3fb950" }}>+ Add New Keyword Policy</span>
+            </div>
+            <div style={{ padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+              {[
+                { label: "Organisation *", key: "userId", placeholder: "Telecomm or Software" },
+                { label: "Sub-user *", key: "subUser", placeholder: "user1, rohan-user, etc." },
+                { label: "Keyword list *", key: "keywordList", placeholder: "confidential,secret" },
+                { label: "Description", key: "promptCol", placeholder: "Optional note" },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <div style={{ fontSize: 11, color: "#6e7681", marginBottom: 4 }}>{label}</div>
+                  <input value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder} style={inputS}
+                    onFocus={e => e.target.style.borderColor = "#388bfd"} onBlur={e => e.target.style.borderColor = "#30363d"} />
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: "0 16px 14px", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{ fontSize: 11, color: "#6e7681" }}>Action:</span>
+              {[
+                { key: "blockCol", label: "BLOCK", color: "#fca5a5", bg: "#7f1d1d" },
+                { key: "criticalCol", label: "CRITICAL", color: "#fcd34d", bg: "#3b2800" },  // YELLOW
+                { key: "redactedCol", label: "REDACT", color: "#c4b5fd", bg: "#2e1a4a" },  // PURPLE
+              ].map(({ key, label, color, bg }) => (
+                <label key={key} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <input type="checkbox" checked={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))} style={{ cursor: "pointer" }} />
+                  <span style={{ background: bg, color, padding: "2px 10px", borderRadius: 5, fontSize: 11, fontWeight: 700 }}>{label}</span>
+                </label>
+              ))}
+            </div>
+            <div style={{ padding: "0 16px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+              <button onClick={handleSave} disabled={saving}
+                style={{ background: saving ? "#21262d" : "#238636", border: "none", color: "#fff", borderRadius: 6, padding: "8px 20px", cursor: saving ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600 }}>
+                {saving ? "Saving..." : "Save Policy"}
+              </button>
+              {msg && <span style={{ fontSize: 12, color: msg.startsWith("❌") ? "#f85149" : "#3fb950" }}>{msg}</span>}
+            </div>
+          </div>
+
+          {/*
+          ═══════════════════════════════════════════════════════════════
+          COMMENTED OUT: Filter bar + policy tables grouped by org
+          (as requested — everything below the Add New Policy form)
+          ═══════════════════════════════════════════════════════════════
+
+          <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+            {["ALL",...orgs].map(org=>(
+              <button key={org} onClick={()=>setFilter(org)} ...>
+                {org}
+              </button>
+            ))}
+            <button onClick={load} ...>⟳ Refresh</button>
+          </div>
+
+          {loading ? (
+            <div ...>Loading policies...</div>
+          ) : Object.keys(grouped).length===0 ? (
+            <div ...>No keyword policies found.</div>
+          ) : Object.entries(grouped).map(([org, rows]) => (
+            <div key={org} style={cardStyle}>
+              ... policy table rows ...
+            </div>
+          ))}
+          */}
+
+        </div>
+      );
+    }
+
+    /* ══════════════════════════════════
+       DASHBOARD
+    ══════════════════════════════════ */
+    function Dashboard({ user, onLogout }) {
+      const { isDesktop, isTablet, isMobile } = useBreakpoint();
+      const [data, setData] = useState({ summary: {}, tools: [], risks: [], logs: [], users: [] });
+      const [loading, setLoading] = useState(false);
+      const [tab, setTab] = useState("overview");
+      const [subTokenTab, setSubTokenTab] = useState("used");
+      const [filter, setFilter] = useState("ALL");
+      const [logActionFilter, setLogActionFilter] = useState("ALL");
+      const filterRef = useRef("ALL");
+      const userRef = useRef(user);
+      useEffect(() => { filterRef.current = filter; }, [filter]);
+      useEffect(() => { userRef.current = user; }, [user]);
+
+      const load = useCallback(async () => {
+        setLoading(true);
+        try {
+          const u = userRef.current, f = filterRef.current;
+          const isA = u.role === "ADMIN";
+          const logsUrl = isA && f === "ALL"
+            ? `${API}/api/analytics/recent-logs?limit=200`
+            : `${API}/api/analytics/my-prompts?userId=${f === "ALL" ? u.userId : f}&limit=200`;
+          const [sum, tools, risks, logs, users, tokenData] = await Promise.all([
+            fetch(`${API}/api/analytics/risk-summary`).then(r => r.json()).catch(() => ({})),
+            fetch(`${API}/api/analytics/tool-usage`).then(r => r.json()).catch(() => []),
+            fetch(`${API}/api/analytics/risk-breakdown`).then(r => r.json()).catch(() => []),
+            fetch(logsUrl).then(r => r.json()).catch(() => []),
+            isA ? fetch(`${API}/api/analytics/users`).then(r => r.json()).catch(() => []) : Promise.resolve([]),
+            fetch(`${API}/api/analytics/tokens`).then(r => r.json()).catch(() => ({})),
+          ]);
+          setData({
+            summary: typeof sum === "object" && !Array.isArray(sum) ? sum : {},
+            tools: Array.isArray(tools) ? tools : [],
+            risks: Array.isArray(risks) ? risks : [],
+            logs: Array.isArray(logs) ? logs : [],
+            users: Array.isArray(users) ? users : [],
+            tokenData: typeof tokenData === "object" ? tokenData : {},
+          });
+        } catch (e) { console.error(e); }
+        setLoading(false);
+      }, []);
+      useEffect(() => { load(); }, []);
+      const handleFilter = useCallback(val => { filterRef.current = val; setFilter(val); load(); }, [load]);
+
+      const { summary: S, tools, risks, logs, users } = data;
+      const isA = user.role === "ADMIN";
+      const safe = nv(S.allowedPrompts), red = nv(S.redactedPrompts), blk = nv(S.blockedPrompts), crit = nv(S.alertedPrompts), tot = nv(S.totalPrompts);
+
+      const userTot = logs.length;
+      const userSafe = logs.filter(l => l.action === "ALLOW").length;
+      const userRed = logs.filter(l => l.action === "REDACT").length;
+      const userBlk = logs.filter(l => l.action === "BLOCK").length;
+      const userCrit = logs.filter(l => l.action === "ALERT").length;
+
+      const displaySafe = isA ? safe : userSafe, displayRed = isA ? red : userRed, displayBlk = isA ? blk : userBlk, displayCrit = isA ? crit : userCrit, displayTot = isA ? tot : userTot;
+      const br = displayTot > 0 ? Math.round(displayBlk / displayTot * 100) : 0;
+      
+      const tkUsed = nv(S.tokensUsed), tkSaved = nv(S.tokensSaved), cUsed = nv(S.costUsed), cSaved = nv(S.costSaved);
+      const userTkUsed = logs.reduce((a,l) => a + nv(l.tokensUsed), 0);
+      const userTkSaved = logs.reduce((a,l) => a + nv(l.tokensSaved), 0);
+      const userCUsed = logs.reduce((a,l) => a + nv(l.costUsed), 0);
+      const userCSaved = logs.reduce((a,l) => a + nv(l.costSaved), 0);
+
+      const dTkUsed = isA ? tkUsed : userTkUsed;
+      const dTkSaved = isA ? tkSaved : userTkSaved;
+      const dCUsed = isA ? cUsed : userCUsed;
+      const dCSaved = isA ? cSaved : userCSaved;
+
+      const comply = [
+        { label: "GDPR", status: br < 15 ? "Compliant" : "Needs Review" },
+        { label: "ISO 27001", status: "Compliant" },
+        { label: "DPDP Act", status: displayRed > 0 ? "Compliant" : "Needs Review" },
+        { label: "SOC 2", status: "Compliant" },
+      ];
+
+      const TABS = isA
+        ? [{ k: "overview", l: "Overview" }, { k: "logs", l: "All Logs" }, { k: "analytics", l: "Analytics" }, { k: "tokens", l: "Tokens" }, { k: "policies", l: "Keyword Policies" }, { k: "test", l: "Test Prompt" }]
+        : [{ k: "overview", l: "Overview" }, { k: "logs", l: "My Logs" }, { k: "keywords", l: "My Keywords" }, { k: "test", l: "Test Prompt" }];
+
+      const px = isMobile ? 12 : 20, gap = 12;
+
+      return (
+        <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#0d1117", overflow: "hidden" }}>
+
+          {/* ══ NAV ══ */}
+          <nav style={{ flexShrink: 0, zIndex: 100, background: "rgba(13,17,23,.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid #21262d", minHeight: 52, display: "flex", alignItems: "center", flexWrap: "wrap", padding: `0 ${px}px`, boxShadow: "0 1px 16px rgba(0,0,0,.5)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginRight: 14, flexShrink: 0 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 7, background: "linear-gradient(135deg,#1f6feb,#a371f7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, boxShadow: "0 0 14px rgba(31,111,235,.4)" }}>🛡️</div>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#e6edf3", letterSpacing: "-.3px" }}>PromptGuard</span>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", padding: "2px 7px", borderRadius: 4, background: isA ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.12)", color: isA ? "#a371f7" : "#58a6ff", border: `1px solid ${isA ? "rgba(163,113,247,.3)" : "rgba(56,139,253,.25)"}` }}>
+                {isA ? "ADMIN" : "USER"}
+              </span>
+            </div>
+            {!isMobile && <>
+              <div style={{ width: 1, height: 18, background: "#21262d", marginRight: 14, flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: "#484f58", marginRight: 18, flexShrink: 0, whiteSpace: "nowrap" }}>Enterprise AI Security Dashboard</span>
+            </>}
+            {!isMobile && (
+              <div style={{ display: "flex", gap: 2 }}>
+                {TABS.map(t => <button key={t.k} onClick={() => setTab(t.k)} className={`nav-tab${tab === t.k ? " active" : ""}`}>{t.l}</button>)}
+              </div>
+            )}
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? 7 : 9 }}>
+              {!isMobile && <LiveClock />}
+              <style>{`@keyframes spin-refresh{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.refresh-spinning{animation:spin-refresh .7s linear}`}</style>
+              <button className="btn btn-ghost" onClick={e => { const ic = e.currentTarget.querySelector('.ref-ic'); if (ic) { ic.classList.add('refresh-spinning'); setTimeout(() => ic.classList.remove('refresh-spinning'), 700); } load(); }}
+                style={{ padding: "4px 11px", fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <span className="ref-ic" style={{ display: "inline-block", fontSize: 13, lineHeight: 1 }}>↻</span>
+                {!isMobile && <span>Refresh</span>}
+              </button>
+              {!isMobile && (
+                <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 9px", background: "rgba(46,160,67,.08)", border: "1px solid rgba(46,160,67,.2)", borderRadius: 20 }}>
+                  <div className="live-dot" style={{ width: 5, height: 5, borderRadius: "50%", background: "#3fb950" }} />
+                  <span style={{ fontSize: 10, color: "#3fb950", fontWeight: 700, letterSpacing: "1px" }}>LIVE</span>
+                </div>
+              )}
+              <div style={{ padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: isA ? "rgba(163,113,247,.12)" : "rgba(56,139,253,.1)", border: `1px solid ${isA ? "rgba(163,113,247,.3)" : "rgba(56,139,253,.25)"}`, color: isA ? "#a371f7" : "#58a6ff" }}>
+                {isA ? "👑" : "👤"} {isMobile ? user.userId.split("-")[0] : user.userId}
+              </div>
+              <button className="btn btn-danger" onClick={onLogout} style={{ padding: "4px 11px", fontSize: 11 }}>{isMobile ? "Exit" : "Sign Out"}</button>
+            </div>
+            {isMobile && (
+              <div style={{ width: "100%", display: "flex", gap: 4, padding: "7px 0 9px", overflowX: "auto", borderTop: "1px solid #21262d", marginTop: 8 }}>
+                {TABS.map(t => <button key={t.k} onClick={() => setTab(t.k)} className={`nav-tab${tab === t.k ? " active" : ""}`} style={{ flexShrink: 0 }}>{t.l}</button>)}
+              </div>
+            )}
+          </nav>
+
+          {/* ══ CONTENT ══ */}
+
+          {tab === "overview" ? (
+            <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "10px 16px 8px", gap: 8, boxSizing: "border-box" }}>
+
+              {/* STAT CARDS - ROW 1 (ALL 7 IN ONE LINE) */}
+              <div style={{ display: "grid", gap: 6, flexShrink: 0, gridTemplateColumns: isMobile ? "repeat(2,1fr)" : isTablet ? "repeat(4,1fr)" : `repeat(${isA ? 7 : 5},1fr)` }}>
+                {[
+                  { label: "Safe Prompts", val: displaySafe, color: "#3fb950", bg: "linear-gradient(135deg,#0f2318,#0d1a10)", border: "#2ea04355", icon: "✅", action: "ALLOW" },
+                  { label: "Redacted", val: displayRed, color: "#a371f7", bg: "linear-gradient(135deg,#160e22,#110c1a)", border: "#a371f755", icon: "✏️", action: "REDACT" },
+                  { label: "Blocked", val: displayBlk, color: "#f85149", bg: "linear-gradient(135deg,#1e0e0d,#160c0c)", border: "#da363355", icon: "🚫", action: "BLOCK" },
+                  { label: "Critical", val: displayCrit, color: "#d29922", bg: "linear-gradient(135deg,#1e1608,#17120a)", border: "#d2992255", icon: "⚡", action: "ALERT" },
+                  { label: isA ? "Total Prompts" : "My Prompts", val: displayTot, color: "#fb8f44", bg: "linear-gradient(135deg,#1e1208,#170e06)", border: "#e3662055", icon: "📊", action: "ALL" },
+                  ...(isA ? [
+                    { label: "Active Users", val: users.length, color: "#c9d1d9", bg: "linear-gradient(135deg,#1c2128,#161b22)", border: "#30363d55", icon: "👥" },
+                    { label: "AI Tools Used", val: tools.length, color: "#79c0ff", bg: "linear-gradient(135deg,#0d1a2e,#111111)", border: "#1f6feb55", icon: "🤖" },
+                  ] : []),
+                ].map(({ label, val, color, bg, border, icon, action }) => (
+                  <div key={label} className="card-hover fade-up" onClick={() => { if (action) { setLogActionFilter(action); setTab("logs"); } }}
+                    style={{ background: bg, border: `1px solid ${border}`, borderRadius: 9, padding: "10px 12px 0", display: "flex", flexDirection: "column", cursor: action ? "pointer" : "default", transition: "transform .15s, box-shadow .15s", overflow: "hidden" }}
+                    onMouseEnter={e => { if (action) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${color}28`; } }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                      <span style={{ fontSize: 12 }}>{icon}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1.5px", fontVariantNumeric: "tabular-nums", marginBottom: 8 }}>{val.toLocaleString()}</div>
+                    {action && (
+                      <div style={{ marginTop: "auto", padding: "4px 0", borderTop: `1px solid ${color}22`, fontSize: 9, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LOGS →</div>
+                    )}
+                    {!action && <div style={{ height: 5 }} />}
+                  </div>
+                ))}
+              </div>
+
+              {/* STAT CARDS - ROW 2 (TOKENS) - ONLY ADMIN */}
+              {isA && (
+                <div style={{ flexShrink: 0, overflowX: "auto", paddingBottom: 6, marginBottom: 2 }}>
+                  <div style={{ display: "flex", gap: 8, minWidth: "max-content" }}>
+                      {[
+                        { label: "Tokens Used", sub: "Sent to LLMs", val: dTkUsed.toLocaleString(), color: "#58a6ff", bg: "linear-gradient(135deg,#0d1a2e,#0a1420)", border: "#1f6feb55", icon: "🪙", subTab: "used" },
+                        { label: "Tokens Saved", sub: "Blocked from LLMs", val: dTkSaved.toLocaleString(), color: "#39d353", bg: "linear-gradient(135deg,#0b1c10,#09140c)", border: "#2ea04355", icon: "🛡️", subTab: "saved" },
+                        { label: "Cost Used", sub: "Estimated spend", val: `$${dCUsed.toFixed(4)}`, color: "#e879f9", bg: "linear-gradient(135deg,#1a0d2e,#140a20)", border: "#6e40c955", icon: "💰", subTab: "used" },
+                        { label: "Cost Saved", sub: "Estimated savings", val: `$${dCSaved.toFixed(4)}`, color: "#fbbf24", bg: "linear-gradient(135deg,#1c1a0d,#14120a)", border: "#d9770655", icon: "💎", subTab: "saved" },
+                      ].map(({ label, sub, val, color, bg, border, icon, subTab }) => (
+                        <div key={label} onClick={() => { setSubTokenTab(subTab); setTab("tokens"); }}
+                          style={{ background: bg, border: `1px solid ${border}`, borderRadius: 9, padding: "10px 14px", display: "flex", flexDirection: "column", minWidth: 200, flex: 1, cursor: "pointer", transition: "transform .15s" }}
+                          onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
+                          onMouseLeave={e => e.currentTarget.style.transform = ""}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                            <span style={{ fontSize: 16 }}>{icon}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: ".5px" }}>{label}</span>
+                          </div>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: "#f0f6fc", marginBottom: 2 }}>{val}</div>
+                          <div style={{ fontSize: 10, color: color + "99", fontWeight: 600 }}>{sub}</div>
+                          <div style={{ marginTop: 6, fontSize: 8, color: color + "55", fontWeight: 800, textAlign: "right" }}>ANALYTICS →</div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* MAIN GRID */}
+              <div style={{ flex: 1, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "62% 38%", gap: 8, minHeight: 0 }}>
+                {/* LEFT */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}>
+                  <div className="card fade-up" style={{ flex: "0 0 55%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
+                    <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid #21262d", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>📈</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>Prompt Activity</span>
+                      <span style={{ marginLeft: "auto", fontSize: 11, color: "#484f58", fontWeight: 500 }}>Last 7 days</span>
+                    </div>
+                    <div style={{ flex: 1, padding: "8px 14px 10px", minHeight: 0, overflow: "hidden", position: "relative" }}><LineChart logs={logs} /></div>
+                  </div>
+                  <div className="card fade-up" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
+                    <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid #21262d", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>⚠️</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>Recent Alerts</span>
+                      <span style={{ marginLeft: "auto", fontSize: 11, color: "#484f58" }}>{logs.length} total</span>
+                    </div>
+                    {logs.length === 0 ? (
+                      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, color: "#484f58" }}>
+                        <span style={{ fontSize: 24 }}>🎉</span>
+                        <span style={{ fontSize: 12, color: "#6e7681" }}>No events yet — send some prompts!</span>
+                      </div>
+                    ) : (
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
+                          <colgroup>
+                            <col style={{ width: "20%" }} />{isA && <col style={{ width: "18%" }} />}<col style={{ width: isA ? "22%" : "28%" }} /><col style={{ width: "18%" }} /><col style={{ width: "18%" }} />
+                          </colgroup>
+                          <thead>
+                            <tr style={{ background: "rgba(0,0,0,.4)" }}>
+                              {(isA ? ["Timestamp", "User", "Risk Type", "Action", "Browser"] : ["Timestamp", "Risk Type", "Action", "Browser"]).map(h => (
+                                <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#6e7681", fontWeight: 600, fontSize: 10, letterSpacing: ".7px", textTransform: "uppercase", borderBottom: "1px solid #21262d", whiteSpace: "nowrap" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                        </table>
+                        <div className="scroll-y" style={{ flex: 1, overflowY: "auto" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
+                            <colgroup>
+                              <col style={{ width: "20%" }} />{isA && <col style={{ width: "18%" }} />}<col style={{ width: isA ? "22%" : "28%" }} /><col style={{ width: "18%" }} /><col style={{ width: "18%" }} />
+                            </colgroup>
+                            <tbody>
+                              {logs.map((l, i) => (
+                                <tr key={i} className="tr-hover" style={{ borderBottom: "1px solid rgba(255,255,255,.035)" }}>
+                                  <td style={{ padding: "8px 12px", color: "#6e7681", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{fmtAge(l.timestamp || l.created_at)}</td>
+                                  {isA && <td style={{ padding: "8px 12px", color: "#79c0ff", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.userId || l.user_id || "—"}</td>}
+                                  <td style={{ padding: "8px 12px" }}>
+                                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 5, fontSize: 10, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "#c9d1d9", whiteSpace: "nowrap" }}>{l.highestRiskType || l.highest_risk_type || "NONE"}</span>
+                                  </td>
+                                  <td style={{ padding: "8px 12px" }}><Badge action={l.action} /></td>
+                                  <td style={{ padding: "8px 12px", color: "#3fb950", fontSize: 11, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.browserName || l.browser_name || "—"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* RIGHT */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}>
+                  <div className="card fade-up" style={{ flex: "0 0 55%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
+                    <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid #21262d", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>⚙️</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>Top Risk Categories</span>
+                    </div>
+                    <div style={{ flex: 1, padding: "8px 12px 10px", minHeight: 0, overflow: "hidden", position: "relative" }}><DonutChart data={risks} /></div>
+                  </div>
+                  <div className="card fade-up" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
+                    <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid #21262d", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>⊞</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>AI Tool Usage</span>
+                    </div>
+                    <div style={{ flex: 1, padding: "8px 12px 10px", minHeight: 0, overflow: "hidden", position: "relative" }}><BarChart data={tools} isAiToolChart={true} /></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* COMPLIANCE STRIP */}
+              <div className="fade-up" style={{ flexShrink: 0, padding: "5px 14px", background: "rgba(33,38,45,.7)", borderRadius: 8, border: "1px solid #21262d", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#6e7681", marginRight: 4, whiteSpace: "nowrap" }}>📋 Compliance:</span>
+                {comply.map(c => (
+                  <span key={c.label} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 10px", borderRadius: 20, background: c.ok ? "rgba(46,160,67,.12)" : "rgba(210,153,34,.12)", border: `1px solid ${c.ok ? "rgba(46,160,67,.3)" : "rgba(210,153,34,.3)"}`, fontSize: 11, fontWeight: 600, color: c.ok ? "#3fb950" : "#d29922" }}>
+                    <span>{c.ok ? "✓" : "!"}</span>
+                    <span style={{ color: "#c9d1d9", fontWeight: 700 }}>{c.label}</span>
+                    <span style={{ opacity: .8 }}>{c.ok ? "Compliant" : "Review"}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+              <div style={{ padding: `${gap}px ${px}px ${gap * 2}px`, display: "flex", flexDirection: "column", gap, maxWidth: 1600, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+
+                {tab === "logs" && (
+                  <AllLogsTab logs={logs} isA={isA} filter={filter} handleFilter={handleFilter} users={users}
+                    logActionFilter={logActionFilter} setLogActionFilter={setLogActionFilter} fmtAge={fmtAge} nv={nv} Badge={Badge} />
+                )}
+
+                {tab === "analytics" && (
+                  <div className="fade-up">
+                    <div style={{ marginBottom: 16 }}>
+                      <h1 style={{ fontSize: 18, fontWeight: 700, color: "#e6edf3" }}>Analytics</h1>
+                      <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>Deep dive into your AI security posture</p>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : isTablet ? "repeat(3,1fr)" : "repeat(5,1fr)", gap, marginBottom: gap }}>
+                      <StatCard delay={1} label="Safe Prompts" value={displaySafe.toLocaleString()} icon="✅" accentColor="#3fb950" borderColor="#2ea04322" bgColor="#0f1e13" />
+                      <StatCard delay={2} label="Redacted" value={displayRed.toLocaleString()} icon="✏️" accentColor="#a371f7" borderColor="#a371f722" bgColor="#130d1e" />  {/* PURPLE */}
+                      <StatCard delay={3} label="Blocked" value={displayBlk.toLocaleString()} icon="🚫" accentColor="#f85149" borderColor="#da363322" bgColor="#1a0e0e" />
+                      <StatCard delay={4} label="Critical Incidents" value={displayCrit.toLocaleString()} icon="⚡" accentColor="#d29922" borderColor="#d2992222" bgColor="#1a1508" />  {/* YELLOW */}
+                      <StatCard delay={5} label="Total Prompts" value={displayTot.toLocaleString()} icon="📊" accentColor="#fb8f44" borderColor="#e3662022" bgColor="#1a1108" sub={`Block rate: ${br}%`} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap }}>
+                      <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+                        <CH icon="📈" title="Prompt Activity (7 days)" />
+                        <div style={{ padding: "10px 18px 16px", height: isMobile ? 200 : 260, position: "relative" }}><LineChart logs={logs} /></div>
+                      </div>
+                      <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+                        <CH icon="⚙️" title="Top Risk Categories" />
+                        <div style={{ padding: "10px 18px 16px", height: isMobile ? 200 : 260, position: "relative" }}><DonutChart data={risks} /></div>
+                      </div>
+                      <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+                        <CH icon="🤖" title="AI Tool Usage" />
+                        <div style={{ padding: "10px 18px 16px", height: isMobile ? 200 : 260, position: "relative" }}><BarChart data={tools} isAiToolChart={true} /></div>
+                      </div>
+                      <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+                        <CH icon="📊" title="Actions Distribution" />
+                        <div style={{ padding: "10px 18px 16px", height: isMobile ? 200 : 260, position: "relative" }}>
+                          {/* REDACT=purple, ALERT=yellow in bar chart */}
+                          <BarChart data={[{ tool: "ALLOW", count: displaySafe }, { tool: "REDACT", count: displayRed }, { tool: "BLOCK", count: displayBlk }, { tool: "ALERT", count: displayCrit }]} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tab === "tokens" && (
+                  <div className="fade-up">
+                    <div style={{ marginBottom: 20 }}>
+                      <h1 style={{ fontSize: 18, fontWeight: 700, color: "#e6edf3" }}>Token Analytics</h1>
+                      <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>Monitor AI token consumption and financial efficiency</p>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 30, marginBottom: 20, borderBottom: "1px solid #21262d" }}>
+                      <div onClick={() => setSubTokenTab("used")} style={{ 
+                        paddingBottom: 10, cursor: "pointer", 
+                        color: subTokenTab === "used" ? "#58a6ff" : "#8b949e", 
+                        borderBottom: `2px solid ${subTokenTab === "used" ? "#58a6ff" : "transparent"}`,
+                        fontSize: 13, fontWeight: 600, transition: "all .2s"
+                      }}>Tokens Used (Actual)</div>
+                      <div onClick={() => setSubTokenTab("saved")} style={{ 
+                        paddingBottom: 10, cursor: "pointer", 
+                        color: subTokenTab === "saved" ? "#39d353" : "#8b949e", 
+                        borderBottom: `2px solid ${subTokenTab === "saved" ? "#39d353" : "transparent"}`,
+                        fontSize: 13, fontWeight: 600, transition: "all .2s"
+                      }}>Tokens Saved (Estimated)</div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 260, background: "linear-gradient(135deg,#161b22,#0d1117)", border: "1px solid #30363d", borderRadius: 12, padding: "20px 24px", boxShadow: "0 4px 20px rgba(0,0,0,.3)" }}>
+                        <div style={{ color: "#8b949e", fontSize: 10, fontWeight: 800, textTransform: "uppercase", marginBottom: 8, letterSpacing: "1px" }}>
+                          {subTokenTab === "used" ? "TOTAL TOKENS USED" : "TOTAL TOKENS SAVED"}
+                        </div>
+                        <div style={{ color: "#f0f6fc", fontSize: 38, fontWeight: 800, letterSpacing: "-1px" }}>
+                          {nv(subTokenTab === "used" ? data.tokenData?.totalTokensUsed : data.tokenData?.totalTokensSaved).toLocaleString()}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 260, background: subTokenTab === "used" ? "linear-gradient(135deg,#0d2a45,#051625)" : "linear-gradient(135deg,#0d452a,#052516)", border: `1px solid ${subTokenTab === "used" ? "#1f6feb33" : "#2ea04333"}`, borderRadius: 12, padding: "20px 24px", boxShadow: "0 4px 20px rgba(0,0,0,.3)" }}>
+                        <div style={{ color: subTokenTab === "used" ? "#79c0ff" : "#39d353", fontSize: 10, fontWeight: 800, textTransform: "uppercase", marginBottom: 8, letterSpacing: "1px" }}>
+                          {subTokenTab === "used" ? "ESTIMATED ACTUAL COST" : "TOTAL COST SAVINGS"}
+                        </div>
+                        <div style={{ color: "#f0f6fc", fontSize: 38, fontWeight: 800, letterSpacing: "-1px" }}>
+                          ${nv(subTokenTab === "used" ? data.tokenData?.totalCostUsed : data.tokenData?.totalCostSaved).toFixed(4)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="card" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", borderRadius: 12 }}>
+                      <div style={{ padding: "14px 18px", borderBottom: "1px solid #21262d", display: "flex", alignItems: "center", gap: 10, background: "#0d1117" }}>
+                        <span style={{ fontSize: 16 }}>{subTokenTab === "used" ? "⚡" : "🛡️"}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>{subTokenTab === "used" ? "Allowed Request Usage (Click row for details)" : "Blocked Prompt Savings (Click row for details)"}</span>
+                      </div>
+                      <div style={{ flex: 1, overflow: "auto", minHeight: 400 }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                          <thead style={{ position: "sticky", top: 0, background: "#161b22", zIndex: 1, borderBottom: "1px solid #21262d" }}>
+                            <tr>
+                              <th style={{ textAlign: "left", padding: 14, color: "#8b949e", fontWeight: 600, textTransform: "uppercase", fontSize: 10, letterSpacing: ".5px" }}>Time</th>
+                              <th style={{ textAlign: "left", padding: 14, color: "#8b949e", fontWeight: 600, textTransform: "uppercase", fontSize: 10, letterSpacing: ".5px" }}>User</th>
+                              <th style={{ textAlign: "left", padding: 14, color: "#8b949e", fontWeight: 600, textTransform: "uppercase", fontSize: 10, letterSpacing: ".5px" }}>Tool</th>
+                              <th style={{ textAlign: "left", padding: 14, color: "#8b949e", fontWeight: 600, textTransform: "uppercase", fontSize: 10, letterSpacing: ".5px" }}>{subTokenTab === "used" ? "Tokens" : "Saved"}</th>
+                              <th style={{ textAlign: "left", padding: 14, color: "#8b949e", fontWeight: 600, textTransform: "uppercase", fontSize: 10, letterSpacing: ".5px" }}>{subTokenTab === "used" ? "Cost" : "Value"}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(subTokenTab === "used" ? (data.tokenData?.usedLogs || []) : (data.tokenData?.savedLogs || [])).length === 0 ? (
+                               <tr><td colSpan="5" style={{ padding: 40, textAlign: "center", color: "#484f58", fontSize: 13 }}>No token data available yet.</td></tr>
+                            ) : (subTokenTab === "used" ? (data.tokenData?.usedLogs || []) : (data.tokenData?.savedLogs || [])).map((l, i) => (
+                              <tr key={i} className="tr-hover" style={{ borderBottom: "1px solid #21262d55" }}>
+                                <td style={{ padding: 14, color: "#8b949e", fontFamily: "'JetBrains Mono',monospace" }}>{fmtAge(l.timestamp)}</td>
+                                <td style={{ padding: 14, color: "#58a6ff", fontWeight: 700 }}>{l.userId}</td>
+                                <td style={{ padding: 14, color: "#c9d1d9" }}>{l.tool}</td>
+                                <td style={{ padding: 14, color: "#c9d1d9", fontWeight: 600 }}>{nv(l.tokens || l.saved).toLocaleString()}</td>
+                                <td style={{ padding: 14, color: subTokenTab === "used" ? "#fca5a5" : "#39d353", fontWeight: 800, fontSize: 13 }}>
+                                    {subTokenTab === "used" ? "-" : "+"}${nv(l.cost || l.value).toFixed(4)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tab === "policies" && <KeywordPoliciesPanel API={API} />}
+                {tab === "keywords" && <UserKeywordsPage userId={user.userId} API={API} />}
+
+                {tab === "test" && (
+                  <div className="fade-up">
+                    <div style={{ marginBottom: 16 }}>
+                      <h1 style={{ fontSize: 18, fontWeight: 700, color: "#e6edf3" }}>Test Prompt</h1>
+                      <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>Submit a prompt and see the real-time security analysis</p>
+                    </div>
+                    <TestPanel userId={user.userId} onDone={load} />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <footer style={{ flexShrink: 0, padding: "8px 20px", borderTop: "1px solid #21262d", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+            <span style={{ fontSize: 11, color: "#484f58" }}>PromptGuard v1.0 · Enterprise AI Security</span>
+            <span style={{ fontSize: 11, color: "#484f58", fontFamily: "'JetBrains Mono',monospace" }}>{new Date().toLocaleDateString()}</span>
+          </footer>
+        </div>
+      );
+    }
+
+    function App() {
+      const [user, setUser] = useState(null);
+      if (!user) return <Login onLogin={setUser} />;
+      return <Dashboard user={user} onLogout={() => setUser(null)} />;
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+
+</html>

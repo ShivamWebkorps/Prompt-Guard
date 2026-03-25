@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>PromptGuard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      width: 360px;
+      background: #07091a;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow-x: hidden
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0d0f2b 0%, #1a1040 50%, #0d1535 100%);
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid #1e2a4a;
+      position: relative;
+      overflow: hidden
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #4f46e522 0%, transparent 70%)
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative
+    }
+
+    .logo-wrap {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 15px #4f46e566
+    }
+
+    .header-text h1 {
+      font-size: 17px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.3px
+    }
+
+    .header-text p {
+      font-size: 11px;
+      color: #818cf8;
+      margin-top: 2px;
+      font-weight: 500
+    }
+
+    .status-pill {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #0a2a0a;
+      border: 1px solid #166534;
+      border-radius: 20px;
+      padding: 4px 10px
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80;
+      animation: pulse 2s infinite
+    }
+
+    .status-text {
+      font-size: 10px;
+      color: #4ade80;
+      font-weight: 700
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .35
+      }
+    }
+
+    #roleBadge {
+      display: none;
+      margin-top: 8px;
+      background: #1e1b4b;
+      border: 1px solid #4338ca;
+      color: #a5b4fc;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      width: fit-content
+    }
+
+    #roleBadge.admin {
+      background: #2e1065;
+      border-color: #7c3aed;
+      color: #c4b5fd
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: #07091a;
+      border-bottom: 1px solid #1e2a4a
+    }
+
+    .stat-box {
+      padding: 14px 6px 12px;
+      text-align: center;
+      border-right: 1px solid #1e2a4a;
+      transition: background .2s
+    }
+
+    .stat-box:last-child {
+      border-right: none
+    }
+
+    .stat-box:hover {
+      background: #0f1228
+    }
+
+    .stat-num {
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 4px
+    }
+
+    .stat-lbl {
+      font-size: 9px;
+      color: #475569;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase
+    }
+
+    .tabs {
+      display: flex;
+      background: #07091a;
+      border-bottom: 1px solid #1e2a4a
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 0;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+      letter-spacing: .8px;
+      text-transform: uppercase
+    }
+
+    .tab:hover {
+      color: #818cf8;
+      background: #0d0f25
+    }
+
+    .tab.active {
+      color: #818cf8;
+      border-bottom-color: #6366f1;
+      background: #0d0f25
+    }
+
+    .panel {
+      display: none;
+      padding: 16px 18px
+    }
+
+    .panel.active {
+      display: block
+    }
+
+    .sec-title {
+      font-size: 10px;
+      color: #475569;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .sec-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #1e2a4a
+    }
+
+    .pg-input {
+      width: 100%;
+      background: #0d0f25;
+      border: 1px solid #1e2a4a;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 12px;
+      outline: none;
+      transition: border-color .2s;
+      font-family: inherit
+    }
+
+    .pg-input:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 2px #4f46e520
+    }
+
+    .pg-input.warn {
+      border-color: #f59e0b
+    }
+
+    textarea.pg-input {
+      resize: vertical;
+      min-height: 74px;
+      line-height: 1.5
+    }
+
+    .btn-primary {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s
+    }
+
+    .btn-primary:hover {
+      opacity: .88;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px #4f46e544
+    }
+
+    .btn-primary:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      transform: none
+    }
+
+    .btn-save {
+      padding: 8px 18px;
+      background: #4f46e5;
+      border: none;
+      color: #fff;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      float: right;
+      transition: all .2s;
+      margin-top: 12px
+    }
+
+    .btn-save:hover {
+      background: #4338ca
+    }
+
+    .result-box {
+      margin-top: 10px;
+      background: #0d0f25;
+      border: 1px solid #1e2a4a;
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: none
+    }
+
+    .result-box.show {
+      display: block
+    }
+
+    .result-action {
+      font-size: 15px;
+      font-weight: 900;
+      margin-bottom: 5px
+    }
+
+    .result-action.BLOCK {
+      color: #f87171
+    }
+
+    .result-action.REDACT {
+      color: #a78bfa
+    }
+
+    .result-action.ALERT {
+      color: #fbbf24
+    }
+
+    .result-action.ALLOW {
+      color: #4ade80
+    }
+
+    .result-detail {
+      color: #64748b;
+      font-size: 11px;
+      line-height: 1.6
+    }
+
+    .result-redacted {
+      margin-top: 8px;
+      background: #07091a;
+      border: 1px solid #1e2a4a;
+      border-radius: 6px;
+      padding: 8px;
+      color: #7dd3fc;
+      font-family: monospace;
+      font-size: 11px;
+      word-break: break-all
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px
+    }
+
+    .toggle-label {
+      font-size: 13px;
+      color: #cbd5e1
+    }
+
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px
+    }
+
+    .toggle input {
+      display: none
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: #1e2a4a;
+      border-radius: 11px;
+      cursor: pointer;
+      transition: .3s
+    }
+
+    .toggle-slider:before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: .3s
+    }
+
+    .toggle input:checked+.toggle-slider {
+      background: #4f46e5
+    }
+
+    .toggle input:checked+.toggle-slider:before {
+      transform: translateX(18px)
+    }
+
+    .lock-row {
+      background: #0d0f25;
+      border: 1px solid #1e2a4a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #475569;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px
+    }
+
+    .warn-banner {
+      background: #2a1a00;
+      border: 1px solid #f59e0b;
+      color: #fbbf24;
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-size: 11px;
+      margin-bottom: 10px;
+      display: none;
+      line-height: 1.4
+    }
+
+    .warn-banner.show {
+      display: block
+    }
+
+    .field-group {
+      margin-bottom: 12px
+    }
+
+    .field-label {
+      font-size: 11px;
+      color: #475569;
+      font-weight: 600;
+      margin-bottom: 5px
+    }
+
+    .danger-btn {
+      width: 100%;
+      padding: 9px;
+      margin-top: 6px;
+      background: #1a0505;
+      border: 1px solid #ef4444;
+      color: #f87171;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s
+    }
+
+    .danger-btn:hover {
+      background: #2a0808;
+      box-shadow: 0 0 10px #ef444422
+    }
+
+    .footer {
+      padding: 9px 18px;
+      text-align: center;
+      font-size: 10px;
+      color: #1e2a4a;
+      border-top: 1px solid #0d0f25;
+      letter-spacing: .3px
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header">
+    <div class="header-inner">
+      <div class="logo-wrap">🛡️</div>
+      <div class="header-text">
+        <h1>PromptGuard</h1>
+        <p>Enterprise AI Firewall</p>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        <span class="status-text">ACTIVE</span>
+      </div>
+    </div>
+    <div id="roleBadge"></div>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 18px 4px; background: #07091a; border-bottom: 1px solid #1e2a4a22;">
+    <div class="sec-title" style="margin-bottom:0; flex:none;">Activity Summary</div>
+    <button id="refreshStatsBtn" title="Refresh from database" style="background:rgba(255,255,255,0.03); border:1px solid #1e2a4a; color:#64748b; cursor:pointer; font-size:14px; padding:2px 8px; border-radius:6px; transition:all .2s; line-height:1;">↻</button>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-num" id="statTotal" style="color:#818cf8">0</div>
+      <div class="stat-lbl">Total</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="statBlocked" style="color:#f87171">0</div>
+      <div class="stat-lbl">Blocked</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="statRedacted" style="color:#a78bfa">0</div>
+      <div class="stat-lbl">Redacted</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="statAllowed" style="color:#4ade80">0</div>
+      <div class="stat-lbl">Allowed</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="test">🧪 Test</div>
+    <div class="tab" data-tab="settings">⚙️ Settings</div>
+    <div class="tab" data-tab="admin">👑 Admin</div>
+  </div>
+
+  <div class="panel active" id="panel-test">
+    <div class="sec-title">Test a Prompt</div>
+    <textarea class="pg-input" id="testPrompt"
+      placeholder="e.g. SELECT * FROM users WHERE password='admin123'"></textarea>
+    <button class="btn-primary" id="testBtn">⚡ Check Prompt</button>
+    <div class="result-box" id="resultBox">
+      <div class="result-action" id="resultAction"></div>
+      <div class="result-detail" id="resultDetail"></div>
+      <div class="result-redacted" id="resultRedacted" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-settings">
+    <div id="toggleWrapper">
+      <div class="toggle-row">
+        <span class="toggle-label">🔰 Protection Enabled</span>
+        <label class="toggle">
+          <input type="checkbox" id="enabledToggle" checked>
+          <div class="toggle-slider"></div>
+        </label>
+      </div>
+    </div>
+    <div class="warn-banner" id="userIdWarn">
+      ⚠️ Set your Organisation ID so your prompts are tracked correctly!
+    </div>
+    <div class="field-group">
+      <div class="field-label">Organisation <span id="orgResolved" style="margin-left: 6px; color: #818cf8; font-weight: 700;"></span></div>
+      <input class="pg-input" type="text" id="userIdInput" placeholder="Telecomm or Software" />
+    </div>
+    <div class="field-group">
+      <div class="field-label">Employee ID</div>
+      <input class="pg-input" type="text" id="subUserInput" placeholder="rohan-user or kushal-user" />
+    </div>
+    <div class="field-group">
+      <div class="field-label">BACKEND API URL</div>
+      <input class="pg-input" type="text" id="apiUrlInput" value="http://localhost:8080" />
+    </div>
+    <button class="btn-save" id="saveBtn">Save Settings</button>
+    <div style="clear:both"></div>
+  </div>
+
+  <div class="panel" id="panel-admin">
+    <div id="adminContent">
+      <div class="lock-row">🔒 Admin access required to view this panel.</div>
+    </div>
+  </div>
+
+  <div class="footer">PromptGuard v1.0 · Enterprise AI Security</div>
+  <script src="popup.js"></script>
+</body>
+
+</html>
