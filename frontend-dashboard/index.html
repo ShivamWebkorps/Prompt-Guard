@@ -1412,8 +1412,27 @@
             )}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? 7 : 9 }}>
               {!isMobile && <LiveClock />}
-
-
+              <div 
+                title="Refresh"
+                onClick={() => window.location.reload()}
+                style={{ 
+                  cursor: "pointer", 
+                  background: "rgba(255,255,255,.04)", 
+                  border: "1px solid #30363d", 
+                  borderRadius: "50%", 
+                  width: 32, 
+                  height: 32, 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  fontSize: 14,
+                  transition: "all .15s"
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,.1)"}
+                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,.04)"}
+              >
+                🔄
+              </div>
               {/* USER PROFILE DROPDOWN */}
               <div style={{ position: "relative" }}>
                   <div onClick={() => setShowUserDropdown(!showUserDropdown)} 
