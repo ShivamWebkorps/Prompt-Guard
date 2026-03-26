@@ -1473,12 +1473,12 @@
                       onMouseEnter={e => { if (action) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${color}28`; } }}
                       onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
-                        <span style={{ fontSize: 13 }}>{icon}</span>
-                        <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
+                        <span style={{ fontSize: 18 }}>{icon}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
                       </div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1.2px", fontVariantNumeric: "tabular-nums", marginBottom: 6 }}>{val.toLocaleString()}</div>
+                      <div style={{ fontSize: 36, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1.5px", fontVariantNumeric: "tabular-nums", marginBottom: 6 }}>{val.toLocaleString()}</div>
                       {action && (
-                        <div style={{ marginTop: "auto", padding: "3px 0", borderTop: `1px solid ${color}22`, fontSize: 9, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LOGS →</div>
+                        <div style={{ marginTop: "auto", padding: "4px 0", borderTop: `1px solid ${color}22`, fontSize: 11, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LOGS →</div>
                       )}
                       {!action && <div style={{ height: 4 }} />}
                     </div>
@@ -1489,8 +1489,8 @@
                 {isA && (
                   <div className="card fade-up" style={{ minWidth: 290, padding: 8, borderRadius: 12, background: "#161b22", border: "1px solid #21262d" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, padding: "0 4px" }}>
-                      <span style={{ fontSize: 13 }}>📌</span>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: "#6e7681", letterSpacing: "1px", textTransform: "uppercase" }}>Admin Insights</span>
+                      <span style={{ fontSize: 16 }}>📌</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: "#6e7681", letterSpacing: "1px", textTransform: "uppercase" }}>Admin Insights</span>
                     </div>
                     <div style={{ display: "grid", gap: 6, gridTemplateColumns: "1fr 1fr" }}>
                       {[
@@ -1510,11 +1510,11 @@
                           onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${color}28`; }}
                           onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
-                            <span style={{ fontSize: 13 }}>{icon}</span>
-                            <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
+                            <span style={{ fontSize: 18 }}>{icon}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
                           </div>
-                          <div style={{ fontSize: 24, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1.2px", fontVariantNumeric: "tabular-nums", marginBottom: 6 }}>{val.toLocaleString()}</div>
-                          <div style={{ marginTop: "auto", padding: "3px 0", borderTop: `1px solid ${color}22`, fontSize: 9, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LIST →</div>
+                          <div style={{ fontSize: 36, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1.5px", fontVariantNumeric: "tabular-nums", marginBottom: 6 }}>{val.toLocaleString()}</div>
+                          <div style={{ marginTop: "auto", padding: "4px 0", borderTop: `1px solid ${color}22`, fontSize: 11, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LIST →</div>
                         </div>
                       ))}
                     </div>
