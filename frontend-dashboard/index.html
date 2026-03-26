@@ -852,6 +852,13 @@
             </div>
             {isA && (
               <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 600 }}>Filter:</span>
+                <select value={filter} onChange={e => { handleFilter(e.target.value); setUserSearch(e.target.value === "ALL" ? "" : e.target.value); }}
+                  style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 8, padding: "7px 12px", fontSize: 12, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                  <option value="ALL">All Users</option>
+                  {users.map(u => <option key={u.user_id} value={u.user_id}>{u.display_name || u.user_id}</option>)}
+                </select>
+                <div style={{ width: 1, height: 20, background: "#30363d", margin: "0 4px" }} />
                 <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                   <span style={{ position: "absolute", left: 10, fontSize: 13, color: "#484f58", pointerEvents: "none" }}>🔍</span>
                   <input value={userSearch} onChange={e => setUserSearch(e.target.value)}
@@ -1736,14 +1743,20 @@
                       
                       {isA && (
                          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                           <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 600 }}>Filter:</span>
+                           <select value={filter} onChange={e => { handleFilter(e.target.value); }}
+                             style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 6, padding: "5px 12px", fontSize: 11, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                             <option value="ALL">All Users</option>
+                             {users.map(u => <option key={u.user_id} value={u.user_id}>{u.display_name || u.user_id}</option>)}
+                           </select>
+                           <div style={{ width: 1, height: 16, background: "#30363d", margin: "0 4px" }} />
                            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                              <span style={{ position: "absolute", left: 10, fontSize: 12, color: "#484f58", pointerEvents: "none" }}>🔍</span>
-                             <input defaultValue={filter === "ALL" ? "" : filter}
-                               onKeyDown={e => { if (e.key === "Enter") handleFilter(e.target.value.trim() || "ALL"); }}
+                             <input value={filter === "ALL" ? "" : filter} onChange={e => handleFilter(e.target.value.trim() || "ALL")}
                                placeholder="Search user..."
                                style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 6, padding: "5px 12px 5px 30px", fontSize: 11, outline: "none", fontFamily: "inherit", width: 180, transition: "border-color .15s" }}
                                onFocus={e => e.currentTarget.style.borderColor = "#58a6ff"}
-                               onBlur={e => { e.currentTarget.style.borderColor = "#30363d"; handleFilter(e.target.value.trim() || "ALL"); }} />
+                               onBlur={e => { e.currentTarget.style.borderColor = "#30363d"; }} />
                            </div>
                          </div>
                       )}
