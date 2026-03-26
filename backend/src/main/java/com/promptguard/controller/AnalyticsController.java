@@ -30,8 +30,9 @@ public class AnalyticsController {
     }
 
     @GetMapping("/tokens")
-    public ResponseEntity<Map<String, Object>> getTokenStats() {
-        Map<String, Object> summary = repository.getGlobalSummary();
+    public ResponseEntity<Map<String, Object>> getTokenStats(@RequestParam(required = false) String userId) {
+        boolean filterByUser = (userId != null && !userId.isBlank() && !"ALL".equals(userId));
+        Map<String, Object> summary = filterByUser ? repository.getUserSummary(userId) : repository.getGlobalSummary();
         Map<String, Object> resp = new LinkedHashMap<>();
         
         resp.put("totalTokensUsed", summary.get("tokensUsed"));
@@ -39,8 +40,8 @@ public class AnalyticsController {
         resp.put("totalTokensSaved", summary.get("tokensSaved"));
         resp.put("totalCostSaved", summary.get("costSaved"));
         
-        resp.put("usedLogs", repository.findUsedTokensLogs(50));
-        resp.put("savedLogs", repository.findSavedTokensLogs(50));
+        resp.put("usedLogs", repository.findUsedTokensLogs(userId, 50));
+        resp.put("savedLogs", repository.findSavedTokensLogs(userId, 50));
         
         return ResponseEntity.ok(resp);
     }
@@ -61,8 +62,10 @@ public class AnalyticsController {
     }
 
     @GetMapping("/recent-logs")
-    public ResponseEntity<?> getRecentLogs(@RequestParam(defaultValue = "50") int limit) {
-        return ResponseEntity.ok(repository.findRecent(limit));
+    public ResponseEntity<?> getRecentLogs(
+            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(required = false) String userId) {
+        return ResponseEntity.ok(repository.findRecent(limit, userId));
     }
 
     @GetMapping("/my-prompts")
@@ -84,6 +87,10 @@ public class AnalyticsController {
                 "  risk_level        AS \"riskLevel\", " +
                 "  action, " +
                 "  action_reason     AS \"actionReason\", " +
+                "  tokens_used       AS \"tokensUsed\", " +
+                "  tokens_saved      AS \"tokensSaved\", " +
+                "  cost_used         AS \"costUsed\", " +
+                "  cost_saved        AS \"costSaved\", " +
                 "  created_at        AS \"timestamp\" " +
                 "FROM audit_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
                 userId, limit);

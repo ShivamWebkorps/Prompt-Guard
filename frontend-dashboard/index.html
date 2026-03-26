@@ -490,13 +490,25 @@
     /* ══════════════════════════════════
        LINE CHART
     ══════════════════════════════════ */
-    const LineChart = memo(function LineChart({ logs }) {
+    const LineChart = memo(function LineChart({ logs, daysFilter = 0 }) {
       const ref = useRef(), inst = useRef();
       useEffect(() => {
         if (!ref.current) return;
         const days = [], labels = [];
-        for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toDateString()); labels.push(d.toLocaleDateString([], { month: "short", day: "numeric" })); }
-        const bkt = act => days.map(ds => logs.filter(l => { try { return new Date(l.timestamp || l.created_at).toDateString() === ds && l.action === act; } catch { return false; } }).length);
+        const count = daysFilter || 7;
+        for (let i = count - 1; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          days.push(d.toDateString());
+          labels.push(d.toLocaleDateString([], { month: "short", day: "numeric" }));
+        }
+        const bkt = act => days.map(ds => logs.filter(l => {
+          try {
+            const lDate = new Date(l.timestamp || l.created_at).toDateString();
+            return lDate === ds && l.action === act;
+          } catch { return false; }
+        }).length);
+
         if (inst.current) { try { inst.current.destroy(); } catch { } }
         inst.current = new Chart(ref.current, {
           type: "line",
@@ -744,19 +756,29 @@
             {/* body */}
             <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                {[
-                  ["User", log.userId || log.user_id || "—"],
-                  ["Tool", log.tool || "—"],
-                  ["Browser", log.browserName || log.browser_name || "—"],
-                  ["Risk Score", String(log.riskScore ?? log.risk_score ?? 0)],
-                  ["Risk Type", log.highestRiskType || log.highest_risk_type || "NONE"],
-                  ["Time", (log.timestamp || log.created_at || "—").replace("T", " ").replace(/\.\d+.*/, "")],
-                ].map(([k, v]) => (
-                  <div key={k} style={{ background: "rgba(0,0,0,.2)", borderRadius: 8, padding: "8px 11px", border: "1px solid #30363d" }}>
-                    <div style={{ fontSize: 9, color: "#6e7681", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 3 }}>{k}</div>
-                    <div style={{ fontSize: 12, color: "#f0f6fc", fontWeight: 600, wordBreak: "break-all" }}>{v}</div>
-                  </div>
-                ))}
+                {(() => {
+                  const promptStats = [
+                    ["User", log.userId || log.user_id || "—"],
+                    ["Tool", log.tool || "—"],
+                    ["Browser", log.browserName || log.browser_name || "—"],
+                    ["Risk Score", String(log.riskScore ?? log.risk_score ?? 0)],
+                    ["Risk Type", log.highestRiskType || log.highest_risk_type || "NONE"],
+                    ["Time", (log.timestamp || log.created_at || "—").replace("T", " ").replace(/\.\d+.*/, "")],
+                  ];
+                  if (log.action === "BLOCK" || log.action === "ALERT" || log.action === "REDACT") {
+                      promptStats.push(["Tokens Saved", Number(log.tokensSaved ?? log.tokens_saved ?? 0).toLocaleString()]);
+                      promptStats.push(["Cost Saved", `$${Number(log.costSaved ?? log.cost_saved ?? 0).toFixed(4)}`]);
+                  } else {
+                      promptStats.push(["Tokens Used", Number(log.tokensUsed ?? log.tokens_used ?? 0).toLocaleString()]);
+                      promptStats.push(["Cost Used", `$${Number(log.costUsed ?? log.cost_used ?? 0).toFixed(4)}`]);
+                  }
+                  return promptStats.map(([k, v]) => (
+                    <div key={k} style={{ background: "rgba(0,0,0,.2)", borderRadius: 8, padding: "8px 11px", border: "1px solid #30363d" }}>
+                      <div style={{ fontSize: 9, color: "#6e7681", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 3 }}>{k}</div>
+                      <div style={{ fontSize: 12, color: "#f0f6fc", fontWeight: 600, wordBreak: "break-all" }}>{v}</div>
+                    </div>
+                  ));
+                })()}
               </div>
 
               {/* original prompt */}
@@ -802,13 +824,19 @@
     ══════════════════════════════════ */
     function AllLogsTab({ logs, isA, filter, handleFilter, users, logActionFilter, setLogActionFilter, fmtAge, nv, Badge }) {
       const [promptModal, setPromptModal] = useState(null);
+      const [userSearch, setUserSearch] = useState(filter === "ALL" ? "" : filter);
+
+      const doSearch = () => {
+        const val = userSearch.trim();
+        handleFilter(val === "" ? "ALL" : val);
+      };
 
       const ACTION_FILTERS = [
         { val: "ALL", label: "All", color: "#8b949e", activeBg: "#21262d", activeBorder: "#8b949e" },
         { val: "ALLOW", label: "✅ Safe", color: "#3fb950", activeBg: "rgba(46,160,67,.15)", activeBorder: "#3fb950" },
-        { val: "REDACT", label: "✏️ Redacted", color: "#a371f7", activeBg: "rgba(163,113,247,.15)", activeBorder: "#a371f7" },  // PURPLE
+        { val: "REDACT", label: "✏️ Redacted", color: "#a371f7", activeBg: "rgba(163,113,247,.15)", activeBorder: "#a371f7" },
         { val: "BLOCK", label: "🚫 Blocked", color: "#f85149", activeBg: "rgba(248,81,73,.15)", activeBorder: "#f85149" },
-        { val: "ALERT", label: "⚡ Critical", color: "#d29922", activeBg: "rgba(210,153,34,.12)", activeBorder: "#d29922" },  // YELLOW
+        { val: "ALERT", label: "⚡ Critical", color: "#d29922", activeBg: "rgba(210,153,34,.12)", activeBorder: "#d29922" },
       ];
 
       const actionFilteredLogs = logActionFilter === "ALL" ? logs : logs.filter(l => l.action === logActionFilter);
@@ -820,14 +848,26 @@
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
             <div>
               <h1 style={{ fontSize: 18, fontWeight: 700, color: "#e6edf3" }}>{isA ? "All Audit Logs" : "My Prompt Logs"}</h1>
-              <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>{isA ? `${actionFilteredLogs.length} record${actionFilteredLogs.length !== 1 ? "s" : ""} — all users` : `${actionFilteredLogs.length} records — your prompts only`}</p>
+              <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>{isA ? `${actionFilteredLogs.length} record${actionFilteredLogs.length !== 1 ? "s" : ""} — ${filter === "ALL" ? "all users" : filter}` : `${actionFilteredLogs.length} records — your prompts only`}</p>
             </div>
             {isA && (
-              <select value={filter} onChange={e => handleFilter(e.target.value)}
-                style={{ marginLeft: "auto", background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 8, padding: "7px 12px", fontSize: 12, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
-                <option value="ALL">All Users</option>
-                {users.map(u => <option key={u.user_id} value={u.user_id}>{u.display_name || u.user_id}</option>)}
-              </select>
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <span style={{ position: "absolute", left: 10, fontSize: 13, color: "#484f58", pointerEvents: "none" }}>🔍</span>
+                  <input value={userSearch} onChange={e => setUserSearch(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") doSearch(); }}
+                    placeholder="Search user (e.g. rohan-user)"
+                    style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 8, padding: "7px 12px 7px 32px", fontSize: 12, outline: "none", fontFamily: "inherit", width: 220, transition: "border-color .15s" }}
+                    onFocus={e => e.currentTarget.style.borderColor = "#58a6ff"}
+                    onBlur={e => { e.currentTarget.style.borderColor = "#30363d"; }} />
+                  {userSearch && (
+                    <button onClick={() => { setUserSearch(""); handleFilter("ALL"); }} style={{ position: "absolute", right: 6, background: "none", border: "none", color: "#484f58", cursor: "pointer", fontSize: 12, padding: 2 }}>✕</button>
+                  )}
+                </div>
+                <button onClick={doSearch} style={{ background: "rgba(88,166,255,.1)", border: "1px solid rgba(88,166,255,.2)", color: "#58a6ff", borderRadius: 8, padding: "7px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(88,166,255,.2)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(88,166,255,.1)"}>Search</button>
+              </div>
             )}
           </div>
 
@@ -1259,50 +1299,54 @@
        DASHBOARD
     ══════════════════════════════════ */
     function Dashboard({ user, onLogout }) {
-      const { isDesktop, isTablet, isMobile } = useBreakpoint();
       const [data, setData] = useState({ summary: {}, tools: [], risks: [], logs: [], users: [] });
       const [loading, setLoading] = useState(false);
       const [tab, setTab] = useState("overview");
+      const [simplePromptModal, setSimplePromptModal] = useState(null);
       const [subTokenTab, setSubTokenTab] = useState("used");
       const [filter, setFilter] = useState("ALL");
       const [logActionFilter, setLogActionFilter] = useState("ALL");
-      const filterRef = useRef("ALL");
-      const userRef = useRef(user);
-      useEffect(() => { filterRef.current = filter; }, [filter]);
-      useEffect(() => { userRef.current = user; }, [user]);
+      const [promptActivityFilter, setPromptActivityFilter] = useState("7");
+      const [showUserDropdown, setShowUserDropdown] = useState(false);
 
-      const load = useCallback(async () => {
+      const isA = user.role === "ADMIN", isMobile = window.innerWidth < 768, isTablet = window.innerWidth < 1024;
+      const API = "http://localhost:8082";
+
+      const handleFilter = (f) => {
+        setFilter(f);
+        load(f);
+      };
+
+      const load = (f = filter) => {
         setLoading(true);
-        try {
-          const u = userRef.current, f = filterRef.current;
-          const isA = u.role === "ADMIN";
-          const logsUrl = isA && f === "ALL"
-            ? `${API}/api/analytics/recent-logs?limit=200`
-            : `${API}/api/analytics/my-prompts?userId=${f === "ALL" ? u.userId : f}&limit=200`;
-          const [sum, tools, risks, logs, users, tokenData] = await Promise.all([
-            fetch(`${API}/api/analytics/risk-summary`).then(r => r.json()).catch(() => ({})),
-            fetch(`${API}/api/analytics/tool-usage`).then(r => r.json()).catch(() => []),
-            fetch(`${API}/api/analytics/risk-breakdown`).then(r => r.json()).catch(() => []),
-            fetch(logsUrl).then(r => r.json()).catch(() => []),
-            isA ? fetch(`${API}/api/analytics/users`).then(r => r.json()).catch(() => []) : Promise.resolve([]),
-            fetch(`${API}/api/analytics/tokens`).then(r => r.json()).catch(() => ({})),
-          ]);
+        const logsUrl = isA
+          ? `${API}/api/analytics/recent-logs?limit=50&userId=${f === "ALL" ? "" : f}`
+          : `${API}/api/analytics/my-prompts?userId=${user.userId}&limit=50`;
+
+        Promise.all([
+          fetch(`${API}/api/analytics/risk-summary`).then(r => r.json()).catch(() => ({})),
+          fetch(`${API}/api/analytics/tool-usage`).then(r => r.json()).catch(() => []),
+          fetch(`${API}/api/analytics/risk-breakdown`).then(r => r.json()).catch(() => []),
+          fetch(logsUrl).then(r => r.json()).catch(() => []),
+          isA ? fetch(`${API}/api/analytics/users`).then(r => r.json()).catch(() => []) : Promise.resolve([]),
+          fetch(`${API}/api/analytics/tokens?userId=${f === "ALL" ? "" : f}`).then(r => r.json()).catch(() => ({})),
+        ]).then(([sum, tl, rk, lg, us, tk]) => {
           setData({
             summary: typeof sum === "object" && !Array.isArray(sum) ? sum : {},
-            tools: Array.isArray(tools) ? tools : [],
-            risks: Array.isArray(risks) ? risks : [],
-            logs: Array.isArray(logs) ? logs : [],
-            users: Array.isArray(users) ? users : [],
-            tokenData: typeof tokenData === "object" ? tokenData : {},
+            tools: Array.isArray(tl) ? tl : [],
+            risks: Array.isArray(rk) ? rk : [],
+            logs: Array.isArray(lg) ? lg : [],
+            users: Array.isArray(us) ? us : [],
+            tokenData: typeof tk === "object" ? tk : {},
           });
-        } catch (e) { console.error(e); }
-        setLoading(false);
-      }, []);
+          setLoading(false);
+        });
+      };
+
       useEffect(() => { load(); }, []);
-      const handleFilter = useCallback(val => { filterRef.current = val; setFilter(val); load(); }, [load]);
 
       const { summary: S, tools, risks, logs, users } = data;
-      const isA = user.role === "ADMIN";
+
       const safe = nv(S.allowedPrompts), red = nv(S.redactedPrompts), blk = nv(S.blockedPrompts), crit = nv(S.alertedPrompts), tot = nv(S.totalPrompts);
 
       const userTot = logs.length;
@@ -1361,22 +1405,38 @@
             )}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? 7 : 9 }}>
               {!isMobile && <LiveClock />}
-              <style>{`@keyframes spin-refresh{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.refresh-spinning{animation:spin-refresh .7s linear}`}</style>
-              <button className="btn btn-ghost" onClick={e => { const ic = e.currentTarget.querySelector('.ref-ic'); if (ic) { ic.classList.add('refresh-spinning'); setTimeout(() => ic.classList.remove('refresh-spinning'), 700); } load(); }}
-                style={{ padding: "4px 11px", fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <span className="ref-ic" style={{ display: "inline-block", fontSize: 13, lineHeight: 1 }}>↻</span>
-                {!isMobile && <span>Refresh</span>}
-              </button>
-              {!isMobile && (
-                <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 9px", background: "rgba(46,160,67,.08)", border: "1px solid rgba(46,160,67,.2)", borderRadius: 20 }}>
-                  <div className="live-dot" style={{ width: 5, height: 5, borderRadius: "50%", background: "#3fb950" }} />
-                  <span style={{ fontSize: 10, color: "#3fb950", fontWeight: 700, letterSpacing: "1px" }}>LIVE</span>
-                </div>
-              )}
-              <div style={{ padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: isA ? "rgba(163,113,247,.12)" : "rgba(56,139,253,.1)", border: `1px solid ${isA ? "rgba(163,113,247,.3)" : "rgba(56,139,253,.25)"}`, color: isA ? "#a371f7" : "#58a6ff" }}>
-                {isA ? "👑" : "👤"} {isMobile ? user.userId.split("-")[0] : user.userId}
+
+
+              {/* USER PROFILE DROPDOWN */}
+              <div style={{ position: "relative" }}>
+                  <div onClick={() => setShowUserDropdown(!showUserDropdown)} 
+                       style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px 4px 6px", borderRadius: 24, cursor: "pointer", background: "rgba(255,255,255,.04)", border: "1px solid #30363d", transition: "all .15s" }}
+                       onMouseEnter={e => e.currentTarget.style.borderColor = "#58a6ff"}
+                       onMouseLeave={e => e.currentTarget.style.borderColor = "#30363d"}>
+                      <img src="./premium_avatar.png" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #30363d", background: "#0d1117" }} alt="User" />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#e6edf3" }}>{isMobile ? user.userId.split("-")[0] : user.userId}</span>
+                      <span style={{ fontSize: 10, color: "#8b949e" }}>▼</span>
+                  </div>
+
+                  {showUserDropdown && (
+                    <>
+                      <div onClick={() => setShowUserDropdown(false)} style={{ position: "fixed", inset: 0, zIndex: 998 }} />
+                      <div className="fade-up" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 220, background: "#161b22", border: "1px solid #30363d", borderRadius: 10, padding: 8, zIndex: 999, boxShadow: "0 8px 32px rgba(0,0,0,.5)" }}>
+                          <div style={{ padding: "8px 12px", borderBottom: "1px solid #21262d", marginBottom: 6 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: "#f0f6fc" }}>{user.name || user.userId}</div>
+                              <div style={{ fontSize: 10, color: "#8b949e", marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+                                  <span style={{ padding: "2px 6px", borderRadius: 4, background: isA ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.15)", color: isA ? "#a371f7" : "#58a6ff", fontWeight: 800, fontSize: 8 }}>{isA ? "ADMIN" : "USER"}</span>
+                                  <span>{user.userId}</span>
+                              </div>
+                          </div>
+                          <button onClick={onLogout} className="btn-danger" style={{ width: "100%", padding: "8px 12px", borderRadius: 6, display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer", border: "none" }}>
+                              <span>🚪</span>
+                              <span style={{ fontWeight: 600 }}>Sign Out</span>
+                          </button>
+                      </div>
+                    </>
+                  )}
               </div>
-              <button className="btn btn-danger" onClick={onLogout} style={{ padding: "4px 11px", fontSize: 11 }}>{isMobile ? "Exit" : "Sign Out"}</button>
             </div>
             {isMobile && (
               <div style={{ width: "100%", display: "flex", gap: 4, padding: "7px 0 9px", overflowX: "auto", borderTop: "1px solid #21262d", marginTop: 8 }}>
@@ -1390,74 +1450,87 @@
           {tab === "overview" ? (
             <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "10px 16px 8px", gap: 8, boxSizing: "border-box" }}>
 
-              {/* STAT CARDS - ROW 1 (ALL 7 IN ONE LINE) */}
-              <div style={{ display: "grid", gap: 6, flexShrink: 0, gridTemplateColumns: isMobile ? "repeat(2,1fr)" : isTablet ? "repeat(4,1fr)" : `repeat(${isA ? 7 : 5},1fr)` }}>
-                {[
-                  { label: "Safe Prompts", val: displaySafe, color: "#3fb950", bg: "linear-gradient(135deg,#0f2318,#0d1a10)", border: "#2ea04355", icon: "✅", action: "ALLOW" },
-                  { label: "Redacted", val: displayRed, color: "#a371f7", bg: "linear-gradient(135deg,#160e22,#110c1a)", border: "#a371f755", icon: "✏️", action: "REDACT" },
-                  { label: "Blocked", val: displayBlk, color: "#f85149", bg: "linear-gradient(135deg,#1e0e0d,#160c0c)", border: "#da363355", icon: "🚫", action: "BLOCK" },
-                  { label: "Critical", val: displayCrit, color: "#d29922", bg: "linear-gradient(135deg,#1e1608,#17120a)", border: "#d2992255", icon: "⚡", action: "ALERT" },
-                  { label: isA ? "Total Prompts" : "My Prompts", val: displayTot, color: "#fb8f44", bg: "linear-gradient(135deg,#1e1208,#170e06)", border: "#e3662055", icon: "📊", action: "ALL" },
-                  ...(isA ? [
-                    { label: "Active Users", val: users.length, color: "#c9d1d9", bg: "linear-gradient(135deg,#1c2128,#161b22)", border: "#30363d55", icon: "👥" },
-                    { label: "AI Tools Used", val: tools.length, color: "#79c0ff", bg: "linear-gradient(135deg,#0d1a2e,#111111)", border: "#1f6feb55", icon: "🤖" },
-                  ] : []),
-                ].map(({ label, val, color, bg, border, icon, action }) => (
-                  <div key={label} className="card-hover fade-up" onClick={() => { if (action) { setLogActionFilter(action); setTab("logs"); } }}
-                    style={{ background: bg, border: `1px solid ${border}`, borderRadius: 9, padding: "10px 12px 0", display: "flex", flexDirection: "column", cursor: action ? "pointer" : "default", transition: "transform .15s, box-shadow .15s", overflow: "hidden" }}
-                    onMouseEnter={e => { if (action) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${color}28`; } }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
-                      <span style={{ fontSize: 12 }}>{icon}</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
+              {/* STAT CARDS - ROW 1 */}
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", flexShrink: 0 }}>
+                {/* PROMPT METRICS */}
+                <div style={{ flex: 1, display: "grid", gap: 6, gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit, minmax(140px, 1fr))" }}>
+                  {[
+                    { label: isA ? "Total Prompts" : "My Prompts", val: displayTot, color: "#fb8f44", bg: "linear-gradient(135deg,#1e1208,#170e06)", border: "#e3662055", icon: "📊", action: "ALL" },
+                    { label: "Safe Prompts", val: displaySafe, color: "#3fb950", bg: "linear-gradient(135deg,#0f2318,#0d1a10)", border: "#2ea04355", icon: "✅", action: "ALLOW" },
+                    { label: "Redacted", val: displayRed, color: "#a371f7", bg: "linear-gradient(135deg,#160e22,#110c1a)", border: "#a371f755", icon: "✏️", action: "REDACT" },
+                    { label: "Blocked", val: displayBlk, color: "#f85149", bg: "linear-gradient(135deg,#1e0e0d,#160c0c)", border: "#da363355", icon: "🚫", action: "BLOCK" },
+                    { label: "Critical", val: displayCrit, color: "#d29922", bg: "linear-gradient(135deg,#1e1608,#17120a)", border: "#d2992255", icon: "⚡", action: "ALERT" },
+                  ].map(({ label, val, color, bg, border, icon, action }) => (
+                    <div key={label} className="card-hover fade-up" onClick={() => { if (action) { setLogActionFilter(action); setTab("logs"); } }}
+                      style={{ background: bg, border: `1px solid ${border}`, borderRadius: 9, padding: "10px 12px 0", display: "flex", flexDirection: "column", cursor: action ? "pointer" : "default", transition: "transform .15s, box-shadow .15s", overflow: "hidden" }}
+                      onMouseEnter={e => { if (action) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${color}28`; } }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                        <span style={{ fontSize: 12 }}>{icon}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
+                      </div>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1.5px", fontVariantNumeric: "tabular-nums", marginBottom: 8 }}>{val.toLocaleString()}</div>
+                      {action && (
+                        <div style={{ marginTop: "auto", padding: "4px 0", borderTop: `1px solid ${color}22`, fontSize: 9, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LOGS →</div>
+                      )}
+                      {!action && <div style={{ height: 5 }} />}
                     </div>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1.5px", fontVariantNumeric: "tabular-nums", marginBottom: 8 }}>{val.toLocaleString()}</div>
-                    {action && (
-                      <div style={{ marginTop: "auto", padding: "4px 0", borderTop: `1px solid ${color}22`, fontSize: 9, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LOGS →</div>
-                    )}
-                    {!action && <div style={{ height: 5 }} />}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
 
-              {/* STAT CARDS - ROW 2 (TOKENS) - ONLY ADMIN */}
-              {isA && (
-                <div style={{ flexShrink: 0, overflowX: "auto", paddingBottom: 6, marginBottom: 2 }}>
-                  <div style={{ display: "flex", gap: 8, minWidth: "max-content" }}>
+                {/* ADMIN INSIGHTS CONTAINER */}
+                {isA && (
+                  <div className="card fade-up" style={{ minWidth: 290, padding: 10, borderRadius: 12, background: "#161b22", border: "1px solid #21262d" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, padding: "0 4px" }}>
+                      <span style={{ fontSize: 12 }}>📌</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: "#6e7681", letterSpacing: "1px", textTransform: "uppercase" }}>Admin Insights</span>
+                    </div>
+                    <div style={{ display: "grid", gap: 6, gridTemplateColumns: "1fr 1fr" }}>
                       {[
-                        { label: "Tokens Used", sub: "Sent to LLMs", val: dTkUsed.toLocaleString(), color: "#58a6ff", bg: "linear-gradient(135deg,#0d1a2e,#0a1420)", border: "#1f6feb55", icon: "🪙", subTab: "used" },
-                        { label: "Tokens Saved", sub: "Blocked from LLMs", val: dTkSaved.toLocaleString(), color: "#39d353", bg: "linear-gradient(135deg,#0b1c10,#09140c)", border: "#2ea04355", icon: "🛡️", subTab: "saved" },
-                        { label: "Cost Used", sub: "Estimated spend", val: `$${dCUsed.toFixed(4)}`, color: "#e879f9", bg: "linear-gradient(135deg,#1a0d2e,#140a20)", border: "#6e40c955", icon: "💰", subTab: "used" },
-                        { label: "Cost Saved", sub: "Estimated savings", val: `$${dCSaved.toFixed(4)}`, color: "#fbbf24", bg: "linear-gradient(135deg,#1c1a0d,#14120a)", border: "#d9770655", icon: "💎", subTab: "saved" },
-                      ].map(({ label, sub, val, color, bg, border, icon, subTab }) => (
-                        <div key={label} onClick={() => { setSubTokenTab(subTab); setTab("tokens"); }}
-                          style={{ background: bg, border: `1px solid ${border}`, borderRadius: 9, padding: "10px 14px", display: "flex", flexDirection: "column", minWidth: 200, flex: 1, cursor: "pointer", transition: "transform .15s" }}
-                          onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
-                          onMouseLeave={e => e.currentTarget.style.transform = ""}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                            <span style={{ fontSize: 16 }}>{icon}</span>
-                            <span style={{ fontSize: 11, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: ".5px" }}>{label}</span>
+                        { label: "Active Users", val: users.length, color: "#79c0ff", bg: "linear-gradient(135deg,#0d1a26,#0a151f)", border: "#1f6feb55", icon: "👥", action: "USERS" },
+                        { label: "Tools Used", val: tools.length, color: "#ff7b72", bg: "linear-gradient(135deg,#260f12,#1f0c0f)", border: "#ff7b7255", icon: "🤖", action: "TOOLS" }
+                      ].map(({ label, val, color, bg, border, icon, action }) => (
+                        <div key={label} className="card-hover" onClick={() => { 
+                            if (action === "USERS") {
+                                setTab("analytics");
+                                setTimeout(() => document.getElementById("active-users-list-card")?.scrollIntoView({ behavior: 'smooth' }), 100);
+                            } else if (action === "TOOLS") {
+                                setTab("analytics");
+                                setTimeout(() => document.getElementById("ai-tools-list-card")?.scrollIntoView({ behavior: 'smooth' }), 100);
+                            }
+                          }}
+                          style={{ background: bg, border: `1px solid ${border}`, borderRadius: 9, padding: "10px 12px 0", display: "flex", flexDirection: "column", cursor: "pointer", transition: "transform .15s, box-shadow .15s", overflow: "hidden" }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${color}28`; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                            <span style={{ fontSize: 12 }}>{icon}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
                           </div>
-                          <div style={{ fontSize: 24, fontWeight: 800, color: "#f0f6fc", marginBottom: 2 }}>{val}</div>
-                          <div style={{ fontSize: 10, color: color + "99", fontWeight: 600 }}>{sub}</div>
-                          <div style={{ marginTop: 6, fontSize: 8, color: color + "55", fontWeight: 800, textAlign: "right" }}>ANALYTICS →</div>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1.5px", fontVariantNumeric: "tabular-nums", marginBottom: 8 }}>{val.toLocaleString()}</div>
+                          <div style={{ marginTop: "auto", padding: "4px 0", borderTop: `1px solid ${color}22`, fontSize: 9, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LIST →</div>
                         </div>
                       ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* MAIN GRID */}
               <div style={{ flex: 1, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "62% 38%", gap: 8, minHeight: 0 }}>
                 {/* LEFT */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}>
-                  <div className="card fade-up" style={{ flex: "0 0 55%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
+                  <div className="card fade-up" style={{ flex: "0 0 54%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
                     <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid #21262d", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 14 }}>📈</span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>Prompt Activity</span>
-                      <span style={{ marginLeft: "auto", fontSize: 11, color: "#484f58", fontWeight: 500 }}>Last 7 days</span>
+                      <select value={promptActivityFilter} onChange={e => setPromptActivityFilter(e.target.value)} style={{ marginLeft: "auto", background: "#161b22", border: "1px solid #30363d", color: "#8b949e", borderRadius: 6, padding: "3px 8px", fontSize: 11, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                        <option value="7">Last 7 days</option>
+                        <option value="15">Last 15 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="90">All time</option>
+                      </select>
                     </div>
-                    <div style={{ flex: 1, padding: "8px 14px 10px", minHeight: 0, overflow: "hidden", position: "relative" }}><LineChart logs={logs} /></div>
+                    <div style={{ flex: 1, padding: "8px 14px 10px", minHeight: 0, overflow: "hidden", position: "relative" }}><LineChart logs={logs} daysFilter={Number(promptActivityFilter)} /></div>
                   </div>
                   <div className="card fade-up" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
                     <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid #21262d", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
@@ -1472,33 +1545,25 @@
                       </div>
                     ) : (
                       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
-                          <colgroup>
-                            <col style={{ width: "20%" }} />{isA && <col style={{ width: "18%" }} />}<col style={{ width: isA ? "22%" : "28%" }} /><col style={{ width: "18%" }} /><col style={{ width: "18%" }} />
-                          </colgroup>
-                          <thead>
-                            <tr style={{ background: "rgba(0,0,0,.4)" }}>
-                              {(isA ? ["Timestamp", "User", "Risk Type", "Action", "Browser"] : ["Timestamp", "Risk Type", "Action", "Browser"]).map(h => (
-                                <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#6e7681", fontWeight: 600, fontSize: 10, letterSpacing: ".7px", textTransform: "uppercase", borderBottom: "1px solid #21262d", whiteSpace: "nowrap" }}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                        </table>
-                        <div className="scroll-y" style={{ flex: 1, overflowY: "auto" }}>
-                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
-                            <colgroup>
-                              <col style={{ width: "20%" }} />{isA && <col style={{ width: "18%" }} />}<col style={{ width: isA ? "22%" : "28%" }} /><col style={{ width: "18%" }} /><col style={{ width: "18%" }} />
-                            </colgroup>
+                        <div style={{ flex: 1, overflow: "auto" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                            <thead style={{ position: "sticky", top: 0, background: "#161b22", zIndex: 1, borderBottom: "1px solid #21262d" }}>
+                              <tr style={{ background: "rgba(0,0,0,.4)" }}>
+                                {(isA ? ["Timestamp", "User", "Risk Type", "Action", "Browser"] : ["Timestamp", "Risk Type", "Action", "Browser"]).map(h => (
+                                  <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#6e7681", fontWeight: 600, fontSize: 10, letterSpacing: ".7px", textTransform: "uppercase", borderBottom: "1px solid #21262d", whiteSpace: "nowrap" }}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
                             <tbody>
-                              {logs.map((l, i) => (
+                              {logs.slice(0, 10).map((l, i) => (
                                 <tr key={i} className="tr-hover" style={{ borderBottom: "1px solid rgba(255,255,255,.035)" }}>
-                                  <td style={{ padding: "8px 12px", color: "#6e7681", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{fmtAge(l.timestamp || l.created_at)}</td>
-                                  {isA && <td style={{ padding: "8px 12px", color: "#79c0ff", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.userId || l.user_id || "—"}</td>}
+                                  <td style={{ padding: "8px 12px", color: "#6e7681", fontFamily: "'JetBrains Mono',monospace", fontSize: 11 }}>{fmtAge(l.timestamp || l.created_at)}</td>
+                                  {isA && <td style={{ padding: "8px 12px", color: "#79c0ff", fontWeight: 700 }}>{l.userId || l.user_id || "—"}</td>}
                                   <td style={{ padding: "8px 12px" }}>
-                                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 5, fontSize: 10, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "#c9d1d9", whiteSpace: "nowrap" }}>{l.highestRiskType || l.highest_risk_type || "NONE"}</span>
+                                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 5, fontSize: 10, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "#c9d1d9" }}>{l.highestRiskType || l.highest_risk_type || "NONE"}</span>
                                   </td>
                                   <td style={{ padding: "8px 12px" }}><Badge action={l.action} /></td>
-                                  <td style={{ padding: "8px 12px", color: "#3fb950", fontSize: 11, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.browserName || l.browser_name || "—"}</td>
+                                  <td style={{ padding: "8px 12px", color: "#3fb950", fontSize: 11, fontWeight: 600 }}>{l.browserName || l.browser_name || "—"}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -1508,21 +1573,52 @@
                     )}
                   </div>
                 </div>
+
                 {/* RIGHT */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}>
-                  <div className="card fade-up" style={{ flex: "0 0 55%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
+                  <div className="card fade-up" style={{ flex: "1 1 55%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
                     <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid #21262d", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 14 }}>⚙️</span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>Top Risk Categories</span>
                     </div>
                     <div style={{ flex: 1, padding: "8px 12px 10px", minHeight: 0, overflow: "hidden", position: "relative" }}><DonutChart data={risks} /></div>
                   </div>
-                  <div className="card fade-up" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
+
+                  {/* TOKEN SUMMARY CARD */}
+                  <div className="card fade-up" style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", overflow: "hidden", borderRadius: 10 }}>
                     <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid #21262d", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 14 }}>⊞</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>AI Tool Usage</span>
+                      <span style={{ fontSize: 14 }}>🪙</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>Token Summary</span>
+                      <span onClick={() => setTab("tokens")} style={{ marginLeft: "auto", fontSize: 10, color: "#8b949e", fontWeight: 700, letterSpacing: ".5px", cursor: "pointer", transition: "color .15s" }}
+                        onMouseEnter={e => e.currentTarget.style.color = "#58a6ff"}
+                        onMouseLeave={e => e.currentTarget.style.color = "#8b949e"}>DETAILS →</span>
                     </div>
-                    <div style={{ flex: 1, padding: "8px 12px 10px", minHeight: 0, overflow: "hidden", position: "relative" }}><BarChart data={tools} isAiToolChart={true} /></div>
+                    <div style={{ padding: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <div style={{ background: "linear-gradient(135deg,#1f1a14,#18140f)", border: "1px solid #d2992222", borderRadius: 8, padding: "6px 10px" }}>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: "#d8b982", letterSpacing: "1px", marginBottom: 3, display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 10 }}>🔶</span> TOKENS USED
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "#f0f6fc", letterSpacing: "-1px", fontVariantNumeric: "tabular-nums" }}>{dTkUsed.toLocaleString()}</div>
+                      </div>
+                      <div style={{ background: "linear-gradient(135deg,#131e29,#0e161f)", border: "1px solid #1f6feb22", borderRadius: 8, padding: "6px 10px" }}>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: "#8cb4ff", letterSpacing: "1px", marginBottom: 3, display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 10 }}>🛡️</span> TOKENS SAVED
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "#f0f6fc", letterSpacing: "-1px", fontVariantNumeric: "tabular-nums" }}>{dTkSaved.toLocaleString()}</div>
+                      </div>
+                      <div style={{ background: "linear-gradient(135deg,#241818,#1c1212)", border: "1px solid #da363322", borderRadius: 8, padding: "6px 10px" }}>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: "#e08a8e", letterSpacing: "1px", marginBottom: 3, display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 10 }}>🔥</span> COST USED
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "#f0f6fc", letterSpacing: "-1px", fontVariantNumeric: "tabular-nums" }}>${dCUsed.toFixed(4)}</div>
+                      </div>
+                      <div style={{ background: "linear-gradient(135deg,#12261a,#0e1d14)", border: "1px solid #2ea04322", borderRadius: 8, padding: "6px 10px" }}>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: "#7ce38b", letterSpacing: "1px", marginBottom: 3, display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 10 }}>💰</span> COST SAVED
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "#f0f6fc", letterSpacing: "-1px", fontVariantNumeric: "tabular-nums" }}>${dCSaved.toFixed(4)}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1581,6 +1677,38 @@
                           <BarChart data={[{ tool: "ALLOW", count: displaySafe }, { tool: "REDACT", count: displayRed }, { tool: "BLOCK", count: displayBlk }, { tool: "ALERT", count: displayCrit }]} />
                         </div>
                       </div>
+                      <div className="card" id="ai-tools-list-card" style={{ display: "flex", flexDirection: "column" }}>
+                        <CH icon="📋" title="AI Tools List" />
+                        <div className="scroll-y" style={{ padding: "0 18px 16px", maxHeight: 260, overflowY: "auto" }}>
+                          {tools.map(t => (
+                            <div key={t.tool || "Unknown"} style={{ padding: "10px 12px", borderBottom: "1px solid #21262d", display: "flex", alignItems: "center", gap: 10 }}>
+                                <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>{t.tool || "Unknown"}</div>
+                                  <div style={{ fontSize: 11, color: "#6e7681" }}>Model / Endpoint</div>
+                                </div>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: "#79c0ff", background: "rgba(121,192,255,.15)", padding: "3px 10px", borderRadius: 12 }}>{t.count} Uses</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="card" id="active-users-list-card" style={{ display: "flex", flexDirection: "column" }}>
+                        <CH icon="👥" title="Active Users" />
+                        <div className="scroll-y" style={{ padding: "0 18px 16px", maxHeight: 260, overflowY: "auto" }}>
+                          {users.length === 0 ? (
+                            <div style={{ padding: 30, textAlign: "center", color: "#484f58", fontSize: 12 }}>No users found.</div>
+                          ) : users.map(u => (
+                            <div key={u.user_id} style={{ padding: "10px 12px", borderBottom: "1px solid #21262d", display: "flex", alignItems: "center", gap: 10 }}>
+                                <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.role === "ADMIN" ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.15)", border: `1px solid ${u.role === "ADMIN" ? "#a371f733" : "#1f6feb33"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>👤</div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>{u.display_name || u.user_id}</div>
+                                  <div style={{ fontSize: 11, color: "#6e7681" }}>{u.user_id}</div>
+                                </div>
+                                <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 4, background: u.role === "ADMIN" ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.12)", color: u.role === "ADMIN" ? "#a371f7" : "#58a6ff", border: `1px solid ${u.role === "ADMIN" ? "#a371f733" : "#1f6feb33"}` }}>{u.role || "USER"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1592,7 +1720,7 @@
                       <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>Monitor AI token consumption and financial efficiency</p>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 30, marginBottom: 20, borderBottom: "1px solid #21262d" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 30, marginBottom: 20, borderBottom: "1px solid #21262d", paddingRight: 10 }}>
                       <div onClick={() => setSubTokenTab("used")} style={{ 
                         paddingBottom: 10, cursor: "pointer", 
                         color: subTokenTab === "used" ? "#58a6ff" : "#8b949e", 
@@ -1605,6 +1733,20 @@
                         borderBottom: `2px solid ${subTokenTab === "saved" ? "#39d353" : "transparent"}`,
                         fontSize: 13, fontWeight: 600, transition: "all .2s"
                       }}>Tokens Saved (Estimated)</div>
+                      
+                      {isA && (
+                         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                           <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                             <span style={{ position: "absolute", left: 10, fontSize: 12, color: "#484f58", pointerEvents: "none" }}>🔍</span>
+                             <input defaultValue={filter === "ALL" ? "" : filter}
+                               onKeyDown={e => { if (e.key === "Enter") handleFilter(e.target.value.trim() || "ALL"); }}
+                               placeholder="Search user..."
+                               style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 6, padding: "5px 12px 5px 30px", fontSize: 11, outline: "none", fontFamily: "inherit", width: 180, transition: "border-color .15s" }}
+                               onFocus={e => e.currentTarget.style.borderColor = "#58a6ff"}
+                               onBlur={e => { e.currentTarget.style.borderColor = "#30363d"; handleFilter(e.target.value.trim() || "ALL"); }} />
+                           </div>
+                         </div>
+                      )}
                     </div>
 
                     <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
@@ -1640,6 +1782,7 @@
                               <th style={{ textAlign: "left", padding: 14, color: "#8b949e", fontWeight: 600, textTransform: "uppercase", fontSize: 10, letterSpacing: ".5px" }}>Tool</th>
                               <th style={{ textAlign: "left", padding: 14, color: "#8b949e", fontWeight: 600, textTransform: "uppercase", fontSize: 10, letterSpacing: ".5px" }}>{subTokenTab === "used" ? "Tokens" : "Saved"}</th>
                               <th style={{ textAlign: "left", padding: 14, color: "#8b949e", fontWeight: 600, textTransform: "uppercase", fontSize: 10, letterSpacing: ".5px" }}>{subTokenTab === "used" ? "Cost" : "Value"}</th>
+                              <th style={{ textAlign: "center", padding: 14, color: "#8b949e", fontWeight: 600, textTransform: "uppercase", fontSize: 10, letterSpacing: ".5px" }}>Prompt</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1653,6 +1796,12 @@
                                 <td style={{ padding: 14, color: "#c9d1d9", fontWeight: 600 }}>{nv(l.tokens || l.saved).toLocaleString()}</td>
                                 <td style={{ padding: 14, color: subTokenTab === "used" ? "#fca5a5" : "#39d353", fontWeight: 800, fontSize: 13 }}>
                                     {subTokenTab === "used" ? "-" : "+"}${nv(l.cost || l.value).toFixed(4)}
+                                </td>
+                                <td style={{ padding: 14, color: "#8b949e", textAlign: "center" }}>
+                                    <button onClick={() => setSimplePromptModal(l.originalPrompt || "—")} title="View prompt"
+                                      style={{ background: "rgba(88,166,255,.1)", border: `1px solid rgba(88,166,255,.2)`, color: "#58a6ff", borderRadius: 6, padding: "4px 9px", cursor: "pointer", fontSize: 13, transition: "all .15s" }}>
+                                      📄
+                                    </button>
                                 </td>
                               </tr>
                             ))}
@@ -1675,6 +1824,24 @@
                     <TestPanel userId={user.userId} onDone={load} />
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* SIMPLE PROMPT MODAL */}
+          {simplePromptModal && (
+            <div onClick={() => setSimplePromptModal(null)} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,.7)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+              <div onClick={e => e.stopPropagation()} style={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 14, width: "100%", maxWidth: 560, maxHeight: "70vh", display: "flex", flexDirection: "column", boxShadow: "0 16px 64px rgba(0,0,0,.6)" }}>
+                <div style={{ padding: "14px 18px", borderBottom: "1px solid #21262d", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                  <span style={{ fontSize: 16 }}>📄</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#e6edf3" }}>Original Prompt</span>
+                  <button onClick={() => setSimplePromptModal(null)} style={{ marginLeft: "auto", background: "rgba(255,255,255,.06)", border: "1px solid #30363d", color: "#8b949e", borderRadius: 6, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, transition: "all .15s" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(248,81,73,.15)"; e.currentTarget.style.color = "#f85149"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,.06)"; e.currentTarget.style.color = "#8b949e"; }}>✕</button>
+                </div>
+                <div style={{ padding: 18, flex: 1, overflow: "auto", fontSize: 13, color: "#c9d1d9", lineHeight: 1.7, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                  {simplePromptModal}
+                </div>
               </div>
             </div>
           )}

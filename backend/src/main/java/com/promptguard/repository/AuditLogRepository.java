@@ -59,9 +59,24 @@ public class AuditLogRepository {
             "FROM audit_logs");
     }
 
-    public List<Map<String, Object>> findRecent(int limit) {
-        return db.queryForList(
-                "SELECT id, " +
+    public Map<String, Object> getUserSummary(String userId) {
+        return db.queryForMap(
+            "SELECT " +
+            "  COUNT(*) AS \"totalPrompts\", " +
+            "  COALESCE(SUM(CASE WHEN action='BLOCK' THEN 1 ELSE 0 END), 0) AS \"blockedPrompts\", " +
+            "  COALESCE(SUM(CASE WHEN action='REDACT' THEN 1 ELSE 0 END), 0) AS \"redactedPrompts\", " +
+            "  COALESCE(SUM(CASE WHEN action='ALERT' THEN 1 ELSE 0 END), 0) AS \"alertedPrompts\", " +
+            "  COALESCE(SUM(CASE WHEN action='ALLOW' THEN 1 ELSE 0 END), 0) AS \"allowedPrompts\", " +
+            "  COALESCE(SUM(tokens_used), 0) AS \"tokensUsed\", " +
+            "  COALESCE(SUM(tokens_saved), 0) AS \"tokensSaved\", " +
+            "  COALESCE(SUM(cost_used), 0.0) AS \"costUsed\", " +
+            "  COALESCE(SUM(cost_saved), 0.0) AS \"costSaved\" " +
+            "FROM audit_logs WHERE user_id = ?",
+            userId);
+    }
+
+    public List<Map<String, Object>> findRecent(int limit, String userId) {
+        String base = "SELECT id, " +
                 "  user_id           AS \"userId\", " +
                 "  tool, " +
                 "  browser_name      AS \"browserName\", " +
@@ -77,19 +92,32 @@ public class AuditLogRepository {
                 "  cost_used         AS \"costUsed\", " +
                 "  cost_saved        AS \"costSaved\", " +
                 "  created_at        AS \"timestamp\" " +
-                "FROM audit_logs ORDER BY created_at DESC LIMIT ?",
-                limit);
+                "FROM audit_logs ";
+        if (userId != null && !userId.isBlank() && !"ALL".equals(userId)) {
+            return db.queryForList(base + "WHERE user_id = ? ORDER BY created_at DESC LIMIT ?", userId, limit);
+        }
+        return db.queryForList(base + "ORDER BY created_at DESC LIMIT ?", limit);
     }
 
-    public List<Map<String, Object>> findUsedTokensLogs(int limit) {
+    public List<Map<String, Object>> findUsedTokensLogs(String userId, int limit) {
+        if (userId != null && !userId.isBlank() && !"ALL".equals(userId)) {
+            return db.queryForList(
+                "SELECT user_id AS \"userId\", tool, original_prompt AS \"originalPrompt\", tokens_used AS \"tokens\", cost_used AS \"cost\", created_at AS \"timestamp\" " +
+                "FROM audit_logs WHERE tokens_used > 0 AND user_id = ? ORDER BY created_at DESC LIMIT ?", userId, limit);
+        }
         return db.queryForList(
-            "SELECT user_id AS \"userId\", tool, tokens_used AS \"tokens\", cost_used AS \"cost\", created_at AS \"timestamp\" " +
+            "SELECT user_id AS \"userId\", tool, original_prompt AS \"originalPrompt\", tokens_used AS \"tokens\", cost_used AS \"cost\", created_at AS \"timestamp\" " +
             "FROM audit_logs WHERE tokens_used > 0 ORDER BY created_at DESC LIMIT ?", limit);
     }
 
-    public List<Map<String, Object>> findSavedTokensLogs(int limit) {
+    public List<Map<String, Object>> findSavedTokensLogs(String userId, int limit) {
+        if (userId != null && !userId.isBlank() && !"ALL".equals(userId)) {
+            return db.queryForList(
+                "SELECT user_id AS \"userId\", tool, original_prompt AS \"originalPrompt\", tokens_used AS \"saved\", cost_used AS \"value\", created_at AS \"timestamp\" " +
+                "FROM audit_logs WHERE tokens_saved > 0 AND user_id = ? ORDER BY created_at DESC LIMIT ?", userId, limit);
+        }
         return db.queryForList(
-            "SELECT user_id AS \"userId\", tool, tokens_saved AS \"saved\", cost_saved AS \"value\", created_at AS \"timestamp\" " +
+            "SELECT user_id AS \"userId\", tool, original_prompt AS \"originalPrompt\", tokens_saved AS \"saved\", cost_saved AS \"value\", created_at AS \"timestamp\" " +
             "FROM audit_logs WHERE tokens_saved > 0 ORDER BY created_at DESC LIMIT ?", limit);
     }
 
