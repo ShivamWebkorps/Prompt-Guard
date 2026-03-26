@@ -14,9 +14,15 @@ public class SecretDetector {
 
     // Patterns that indicate secrets/credentials
     private static final List<Pattern> SECRET_PATTERNS = List.of(
+            // Code-style: password=X, password: X
             Pattern.compile("password\\s*[=:]\\s*\\S+", Pattern.CASE_INSENSITIVE),
             Pattern.compile("passwd\\s*[=:]\\s*\\S+", Pattern.CASE_INSENSITIVE),
             Pattern.compile("pwd\\s*[=:]\\s*\\S+", Pattern.CASE_INSENSITIVE),
+            // Natural language: "password is X", "password for X is Y"
+            Pattern.compile("password\\s+(?:is|was|will be|set to)\\s+\\S+", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("password\\s+for\\s+\\S+\\s+is\\s+\\S+", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("(?:my|the|our|db|database|server|root|admin|postgres|mysql)\\s+password\\s+(?:is|was|=|:)\\s*\\S+", Pattern.CASE_INSENSITIVE),
+            // API keys and tokens
             Pattern.compile("api[_-]?key\\s*[=:]\\s*\\S+", Pattern.CASE_INSENSITIVE),
             Pattern.compile("secret[_-]?key\\s*[=:]\\s*\\S+", Pattern.CASE_INSENSITIVE),
             Pattern.compile("access[_-]?token\\s*[=:]\\s*\\S+", Pattern.CASE_INSENSITIVE),

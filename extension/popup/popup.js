@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── Load stats ───────────────────────────────
   chrome.storage.sync.get(["userId", "apiUrl"], (syncData) => {
-    const apiBase = syncData.apiUrl || "http://localhost:8080";
+    const apiBase = syncData.apiUrl || "http://localhost:8082";
     const userId  = syncData.userId;
 
     // 1. Show local cache first (instant)
@@ -178,7 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("saveBtn")?.addEventListener("click", () => {
     const userId  = document.getElementById("userIdInput").value.trim();
     const subUser = document.getElementById("subUserInput").value.trim();
-    const apiUrl  = document.getElementById("apiUrlInput").value.trim() || "http://localhost:8080";
+    const apiUrl  = document.getElementById("apiUrlInput").value.trim() || "http://localhost:8082";
     const enabled = document.getElementById("enabledToggle")?.checked ?? true;
     const btn     = document.getElementById("saveBtn");
 
@@ -194,7 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Refresh & Action buttons ────────────────
   document.getElementById("refreshStatsBtn")?.addEventListener("click", () => {
     chrome.storage.sync.get(["userId", "apiUrl"], (data) => {
-      loadRemoteStats(data.userId, data.apiUrl || "http://localhost:8080");
+      loadRemoteStats(data.userId, data.apiUrl || "http://localhost:8082");
     });
   });
 
@@ -213,7 +213,7 @@ async function runTestPrompt() {
   testBtn.disabled    = true;
   testBtn.textContent = "⏳ Checking...";
 
-  const apiBase  = document.getElementById("apiUrlInput")?.value?.trim() || "http://localhost:8080";
+  const apiBase  = document.getElementById("apiUrlInput")?.value?.trim() || "http://localhost:8082";
   const userId   = document.getElementById("userIdInput")?.value?.trim() || "popup-test";
   const subUser  = document.getElementById("subUserInput")?.value?.trim() || "test-user";
 

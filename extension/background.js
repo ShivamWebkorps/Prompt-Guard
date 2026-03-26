@@ -15,7 +15,7 @@ async function getSettings() {
       resolve({
         userId: (data.userId && data.userId.trim()) ? data.userId.trim() : "anonymous-user",
         subUser: (data.subUser && data.subUser.trim()) ? data.subUser.trim() : "anonymous-user",
-        apiUrl: (data.apiUrl && data.apiUrl.trim()) ? data.apiUrl.trim() : "http://localhost:8080",
+        apiUrl: (data.apiUrl && data.apiUrl.trim()) ? data.apiUrl.trim() : "http://localhost:8082",
       });
     });
   });
@@ -160,7 +160,7 @@ sendHeartbeat();
 setInterval(sendHeartbeat, 30000);
 
 // ── Uninstall page ────────────────────────────────────────────
-chrome.runtime.setUninstallURL("http://localhost:8080/extension-removed-notice");
+chrome.runtime.setUninstallURL("http://localhost:8082/extension-removed-notice");
 
 // ── Detect disable from chrome://extensions ───────────────────
 try {

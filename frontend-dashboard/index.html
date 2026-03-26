@@ -328,7 +328,7 @@
   <div id="root"></div>
   <script type="text/babel">
     const { useState, useEffect, useCallback, useRef, memo } = React;
-    const API = "http://localhost:8080";
+    const API = "http://localhost:8082";
 
     const nv = v => Number(v) || 0;
     const fmtAge = ts => {
@@ -394,7 +394,7 @@
       useEffect(() => {
         fetch(`${API}/api/analytics/users`).then(r => r.json())
           .then(d => { setUsers(Array.isArray(d) ? d : []); setLoading(false); })
-          .catch(() => { setErr("Cannot connect to backend at localhost:8080"); setLoading(false); });
+          .catch(() => { setErr("Cannot connect to backend at localhost:8082"); setLoading(false); });
       }, []);
       const go = async () => {
         if (!sel) { setErr("Select an account"); return; }
