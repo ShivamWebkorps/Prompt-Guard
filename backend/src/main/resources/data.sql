@@ -33,11 +33,7 @@ SELECT
         WHEN 2 THEN 'Gemini'
         ELSE 'Cursor'
     END as tool,
-    CASE (random()*3)::int % 3
-        WHEN 0 THEN 'Chrome'
-        WHEN 1 THEN 'Edge'
-        ELSE 'Firefox'
-    END as browser_name,
+    'Chrome' as browser_name,
     'Sample Prompt ' || i as original_prompt,
     'Sample Prompt ' || i as redacted_prompt,
     CASE (random()*4)::int % 4
