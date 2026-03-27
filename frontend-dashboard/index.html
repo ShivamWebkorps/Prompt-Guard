@@ -819,18 +819,63 @@
       );
     }
 
+    function SearchableUserFilter({ users, filter, handleFilter, placeholder = "Search user...", selectedOrg, getOrg }) {
+      const [isOpen, setIsOpen] = useState(false);
+      const [search, setSearch] = useState("");
+      const containerRef = useRef(null);
+      useEffect(() => {
+        const handleClickOutside = (e) => {
+          if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false);
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+      }, []);
+      const filtered = users.filter(u => {
+        const matchesSearch = (u.display_name || u.user_id).toLowerCase().includes(search.toLowerCase()) ||
+                             u.user_id.toLowerCase().includes(search.toLowerCase());
+        const matchesOrg = selectedOrg === "ALL" || getOrg(u.user_id) === selectedOrg;
+        return matchesSearch && matchesOrg;
+      });
+      const displayValue = filter === "ALL" ? "" : filter;
+      return (
+        <div ref={containerRef} style={{ position: "relative", width: 220 }}>
+          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+            <span style={{ position: "absolute", left: 10, fontSize: 13, color: "#484f58", pointerEvents: "none" }}>🔍</span>
+            <input
+              value={isOpen ? search : displayValue}
+              onChange={e => { setSearch(e.target.value); if (!isOpen) setIsOpen(true); }}
+              onFocus={() => { setIsOpen(true); setSearch(""); }}
+              placeholder={placeholder}
+              style={{ width: "100%", background: "#161b22", border: `1px solid ${isOpen ? "#58a6ff" : "#30363d"}`, color: "#c9d1d9", borderRadius: 8, padding: "7px 12px 7px 32px", fontSize: 12, outline: "none", fontFamily: "inherit", transition: "all .15s" }}
+            />
+            {(filter !== "ALL" || search) && (
+              <button onClick={() => { handleFilter("ALL"); setSearch(""); setIsOpen(false); }} style={{ position: "absolute", right: 8, background: "none", border: "none", color: "#484f58", cursor: "pointer", fontSize: 12 }}>✕</button>
+            )}
+          </div>
+          {isOpen && (
+            <div className="fade-up" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "#161b22", border: "1px solid #30363d", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,.5)", zIndex: 1000, maxHeight: 280, overflowY: "auto" }}>
+              <div onClick={() => { handleFilter("ALL"); setIsOpen(false); }}
+                style={{ padding: "8px 12px", cursor: "pointer", fontSize: 12, color: filter === "ALL" ? "#58a6ff" : "#8b949e", background: filter === "ALL" ? "rgba(88,166,255,.1)" : "transparent", borderBottom: "1px solid #21262d", fontWeight: filter === "ALL" ? 700 : 500 }}>All Users</div>
+              {filtered.length === 0 ? <div style={{ padding: "12px", fontSize: 11, color: "#484f58", textAlign: "center" }}>No users found</div> : filtered.map(u => (
+                <div key={u.user_id} onClick={() => { handleFilter(u.user_id); setIsOpen(false); }}
+                  style={{ padding: "8px 12px", cursor: "pointer", fontSize: 12, color: filter === u.user_id ? "#58a6ff" : "#c9d1d9", background: filter === u.user_id ? "rgba(88,166,255,.1)" : "transparent", borderBottom: "1px solid #21262d", transition: "all .1s" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,.05)"}
+                  onMouseLeave={e => e.currentTarget.style.background = filter === u.user_id ? "rgba(88,166,255,.1)" : "transparent"}>
+                  <div style={{ fontWeight: 700 }}>{u.user_id}</div>
+                  <div style={{ fontSize: 10, color: "#6e7681" }}>{u.display_name || "Enterprise User"}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     /* ══════════════════════════════════
        ALL LOGS TAB
     ══════════════════════════════════ */
-    function AllLogsTab({ logs, isA, filter, handleFilter, users, logActionFilter, setLogActionFilter, fmtAge, nv, Badge }) {
+    function AllLogsTab({ logs, isA, userFilter, handleFilter, users, logActionFilter, setLogActionFilter, fmtAge, nv, Badge, orgFilter, setOrgFilter, allOrgs, getOrg }) {
       const [promptModal, setPromptModal] = useState(null);
-      const [userSearch, setUserSearch] = useState(filter === "ALL" ? "" : filter);
-
-      const doSearch = () => {
-        const val = userSearch.trim();
-        handleFilter(val === "" ? "ALL" : val);
-      };
-
       const ACTION_FILTERS = [
         { val: "ALL", label: "All", color: "#8b949e", activeBg: "#21262d", activeBorder: "#8b949e" },
         { val: "ALLOW", label: "✅ Safe", color: "#3fb950", activeBg: "rgba(46,160,67,.15)", activeBorder: "#3fb950" },
@@ -840,40 +885,34 @@
       ];
 
       const actionFilteredLogs = logActionFilter === "ALL" ? logs : logs.filter(l => l.action === logActionFilter);
+      // Frontend org filtering
+      const orgFilteredLogs = orgFilter === "ALL" ? actionFilteredLogs : actionFilteredLogs.filter(l => getOrg(l.userId || l.user_id) === orgFilter);
 
       return (
         <div className="fade-up">
           {promptModal && <PromptModal log={promptModal} onClose={() => setPromptModal(null)} Badge={Badge} />}
 
+          {isA && (
+            <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap", alignItems: "center", background: "rgba(255,255,255,.03)", padding: "10px 16px", borderRadius: 12, border: "1px solid #21262d", boxShadow: "inset 0 1px 1px rgba(255,255,255,.05)" }}>
+              <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 700, marginRight: 2, textTransform: "uppercase", letterSpacing: ".5px" }}>🏢 Org filter:</span>
+              {["ALL", ...allOrgs].map(org => (
+                <button key={org} onClick={() => { setOrgFilter(org); handleFilter("ALL"); }}
+                  style={{ padding: "5px 16px", borderRadius: 20, fontSize: 11, cursor: "pointer", fontWeight: orgFilter === org ? 700 : 500, border: `1.5px solid ${orgFilter === org ? "#58a6ff" : "#30363d"}`, background: orgFilter === org ? "rgba(88,166,255,.12)" : "transparent", color: orgFilter === org ? "#58a6ff" : "#8b949e", transition: "all .15s", fontFamily: "inherit" }}>
+                  {org === "ALL" ? "All" : org}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
             <div>
               <h1 style={{ fontSize: 18, fontWeight: 700, color: "#e6edf3" }}>{isA ? "All Audit Logs" : "My Prompt Logs"}</h1>
-              <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>{isA ? `${actionFilteredLogs.length} record${actionFilteredLogs.length !== 1 ? "s" : ""} — ${filter === "ALL" ? "all users" : filter}` : `${actionFilteredLogs.length} records — your prompts only`}</p>
+              <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>{isA ? `${orgFilteredLogs.length} record${orgFilteredLogs.length !== 1 ? "s" : ""} — ${orgFilter === "ALL" ? "all orgs" : orgFilter}${userFilter !== "ALL" ? ` — user: ${userFilter}` : ""}` : `${orgFilteredLogs.length} records — your prompts only`}</p>
             </div>
             {isA && (
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 600 }}>Filter:</span>
-                <select value={filter} onChange={e => { handleFilter(e.target.value); setUserSearch(e.target.value === "ALL" ? "" : e.target.value); }}
-                  style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 8, padding: "7px 12px", fontSize: 12, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
-                  <option value="ALL">All Users</option>
-                  {users.map(u => <option key={u.user_id} value={u.user_id}>{u.display_name || u.user_id}</option>)}
-                </select>
-                <div style={{ width: 1, height: 20, background: "#30363d", margin: "0 4px" }} />
-                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                  <span style={{ position: "absolute", left: 10, fontSize: 13, color: "#484f58", pointerEvents: "none" }}>🔍</span>
-                  <input value={userSearch} onChange={e => setUserSearch(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter") doSearch(); }}
-                    placeholder="Search user (e.g. rohan-user)"
-                    style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 8, padding: "7px 12px 7px 32px", fontSize: 12, outline: "none", fontFamily: "inherit", width: 220, transition: "border-color .15s" }}
-                    onFocus={e => e.currentTarget.style.borderColor = "#58a6ff"}
-                    onBlur={e => { e.currentTarget.style.borderColor = "#30363d"; }} />
-                  {userSearch && (
-                    <button onClick={() => { setUserSearch(""); handleFilter("ALL"); }} style={{ position: "absolute", right: 6, background: "none", border: "none", color: "#484f58", cursor: "pointer", fontSize: 12, padding: 2 }}>✕</button>
-                  )}
-                </div>
-                <button onClick={doSearch} style={{ background: "rgba(88,166,255,.1)", border: "1px solid rgba(88,166,255,.2)", color: "#58a6ff", borderRadius: 8, padding: "7px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(88,166,255,.2)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "rgba(88,166,255,.1)"}>Search</button>
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 600 }}>User Search:</span>
+                <SearchableUserFilter users={users} filter={userFilter} handleFilter={handleFilter} selectedOrg={orgFilter} getOrg={getOrg} placeholder={orgFilter === "ALL" ? "Search all users..." : `Search ${orgFilter} users...`} />
               </div>
             )}
           </div>
@@ -1311,20 +1350,25 @@
       const [tab, setTab] = useState("overview");
       const [simplePromptModal, setSimplePromptModal] = useState(null);
       const [subTokenTab, setSubTokenTab] = useState("used");
-      const [filter, setFilter] = useState("ALL");
+      const [orgFilter, setOrgFilter] = useState("ALL");
+      const [userFilter, setUserFilter] = useState("ALL");
       const [logActionFilter, setLogActionFilter] = useState("ALL");
       const [promptActivityFilter, setPromptActivityFilter] = useState("7");
       const [showUserDropdown, setShowUserDropdown] = useState(false);
+
+      const getOrg = (uid) => uid === "kushal-user" ? "Telecomm" : uid === "rohan-user" ? "Software" : "Other";
+      const orgLabel = (o) => o;
+      const allOrgs = ["Software", "Telecomm", "Other"];
 
       const isA = user.role === "ADMIN", isMobile = window.innerWidth < 768, isTablet = window.innerWidth < 1024;
       const API = "http://localhost:8082";
 
       const handleFilter = (f) => {
-        setFilter(f);
+        setUserFilter(f);
         load(f);
       };
 
-      const load = (f = filter) => {
+      const load = (f = userFilter) => {
         setLoading(true);
         const logsUrl = isA
           ? `${API}/api/analytics/recent-logs?limit=50&userId=${f === "ALL" ? "" : f}`
@@ -1384,8 +1428,11 @@
       ];
 
       const TABS = isA
-        ? [{ k: "overview", l: "Overview" }, { k: "logs", l: "All Logs" }, { k: "analytics", l: "Analytics" }, { k: "tokens", l: "Tokens" }, { k: "policies", l: "Keyword Policies" }, { k: "test", l: "Test Prompt" }]
-        : [{ k: "overview", l: "Overview" }, { k: "logs", l: "My Logs" }, { k: "keywords", l: "My Keywords" }, { k: "test", l: "Test Prompt" }];
+        ? [{ k: "overview", l: "Home" }, { k: "logs", l: "All Logs" }, { k: "analytics", l: "Analytics" }, { k: "tokens", l: "Tokens" }, { k: "policies", l: "Keyword Policies" }, { k: "test", l: "Test Prompt" }]
+        : [{ k: "overview", l: "Home" }, { k: "logs", l: "My Logs" }, { k: "keywords", l: "My Keywords" }, { k: "test", l: "Test Prompt" }];
+
+      const orgFilteredLogs = isA && orgFilter !== "ALL" ? logs.filter(l => getOrg(l.userId || l.user_id) === orgFilter) : logs;
+      const orgFilteredUsers = isA && orgFilter !== "ALL" ? users.filter(u => getOrg(u.user_id) === orgFilter) : users;
 
       const px = isMobile ? 12 : 20, gap = 12;
 
@@ -1484,23 +1531,23 @@
                 {/* PROMPT METRICS */}
                 <div style={{ flex: 1, display: "grid", gap: 6, gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit, minmax(140px, 1fr))" }}>
                   {[
-                    { label: isA ? "Total Prompts" : "My Prompts", val: displayTot, color: "#fb8f44", bg: "linear-gradient(135deg,#1e1208,#170e06)", border: "#e3662055", icon: "📊", action: "ALL" },
-                    { label: "Safe Prompts", val: displaySafe, color: "#3fb950", bg: "linear-gradient(135deg,#0f2318,#0d1a10)", border: "#2ea04355", icon: "✅", action: "ALLOW" },
-                    { label: "Redacted", val: displayRed, color: "#a371f7", bg: "linear-gradient(135deg,#160e22,#110c1a)", border: "#a371f755", icon: "✏️", action: "REDACT" },
-                    { label: "Blocked", val: displayBlk, color: "#f85149", bg: "linear-gradient(135deg,#1e0e0d,#160c0c)", border: "#da363355", icon: "🚫", action: "BLOCK" },
-                    { label: "Critical", val: displayCrit, color: "#d29922", bg: "linear-gradient(135deg,#1e1608,#17120a)", border: "#d2992255", icon: "⚡", action: "ALERT" },
-                  ].map(({ label, val, color, bg, border, icon, action }) => (
+                    { label: isA ? "Total Prompts" : "My Prompts", val: displayTot, color: "#fb8f44", bg: "linear-gradient(135deg,#1e1208,#170e06)", border: "#e3662055", icon: "📊", action: "ALL", al: "VIEW ALL LOGS →" },
+                    { label: "Safe Prompts", val: displaySafe, color: "#3fb950", bg: "linear-gradient(135deg,#0f2318,#0d1a10)", border: "#2ea04355", icon: "✅", action: "ALLOW", al: "VIEW SAFE LOGS →" },
+                    { label: "Redacted", val: displayRed, color: "#a371f7", bg: "linear-gradient(135deg,#160e22,#110c1a)", border: "#a371f755", icon: "✏️", action: "REDACT", al: "VIEW REDACTED LOGS →" },
+                    { label: "Blocked", val: displayBlk, color: "#f85149", bg: "linear-gradient(135deg,#1e0e0d,#160c0c)", border: "#da363355", icon: "🚫", action: "BLOCK", al: "VIEW BLOCKED LOGS →" },
+                    { label: "Critical", val: displayCrit, color: "#d29922", bg: "linear-gradient(135deg,#1e1608,#17120a)", border: "#d2992255", icon: "⚡", action: "ALERT", al: "VIEW CRITICAL LOGS →" },
+                  ].map(({ label, val, color, bg, border, icon, action, al }) => (
                     <div key={label} className="card-hover fade-up" onClick={() => { if (action) { setLogActionFilter(action); setTab("logs"); } }}
                       style={{ background: bg, border: `1px solid ${border}`, borderRadius: 9, padding: "0 6px", display: "flex", flexDirection: "column", cursor: action ? "pointer" : "default", transition: "transform .15s, box-shadow .15s", overflow: "hidden" }}
                       onMouseEnter={e => { if (action) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${color}28`; } }}
                       onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: -2 }}>
                         <span style={{ fontSize: 12 }}>{icon}</span>
-                        <span style={{ fontSize: 9, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
                       </div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1px", fontVariantNumeric: "tabular-nums", marginBottom: 0 }}>{val.toLocaleString()}</div>
                       {action && (
-                        <div style={{ marginTop: "auto", padding: "0", borderTop: `1px solid ${color}22`, fontSize: 8, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LOGS →</div>
+                        <div style={{ marginTop: "auto", padding: "0", borderTop: `1px solid ${color}22`, fontSize: 10, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>{al}</div>
                       )}
                       {!action && <div style={{ height: 2 }} />}
                     </div>
@@ -1512,13 +1559,13 @@
                   <div className="card fade-up" style={{ minWidth: 280, padding: 0, borderRadius: 12, background: "#161b22", border: "1px solid #21262d" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 0, padding: "0 4px" }}>
                       <span style={{ fontSize: 12 }}>📌</span>
-                      <span style={{ fontSize: 9, fontWeight: 800, color: "#6e7681", letterSpacing: "1px", textTransform: "uppercase" }}>Admin Insights</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: "#6e7681", letterSpacing: "1px", textTransform: "uppercase" }}>Admin Insights</span>
                     </div>
                     <div style={{ display: "grid", gap: 6, gridTemplateColumns: "1fr 1fr" }}>
                       {[
-                        { label: "Active Users", val: users.length, color: "#79c0ff", bg: "linear-gradient(135deg,#0d1a26,#0a151f)", border: "#1f6feb55", icon: "👥", action: "USERS" },
-                        { label: "Tools Used", val: tools.length, color: "#ff7b72", bg: "linear-gradient(135deg,#260f12,#1f0c0f)", border: "#ff7b7255", icon: "🤖", action: "TOOLS" }
-                      ].map(({ label, val, color, bg, border, icon, action }) => (
+                        { label: "Active Users", val: users.length, icon: "👥", action: "USERS" },
+                        { label: "Tools Used", val: tools.length, icon: "🤖", action: "TOOLS" }
+                      ].map(({ label, val, icon, action }) => (
                         <div key={label} className="card-hover" onClick={() => {
                           if (action === "USERS") {
                             setTab("analytics");
@@ -1528,15 +1575,15 @@
                             setTimeout(() => document.getElementById("ai-tools-list-card")?.scrollIntoView({ behavior: 'smooth' }), 100);
                           }
                         }}
-                          style={{ background: bg, border: `1px solid ${border}`, borderRadius: 9, padding: "2px 8px 0", display: "flex", flexDirection: "column", cursor: "pointer", transition: "transform .15s, box-shadow .15s", overflow: "hidden" }}
-                          onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${color}28`; }}
+                          style={{ background: "rgba(255,255,255,.03)", border: "1px solid #30363d", borderRadius: 9, padding: "2px 8px 0", display: "flex", flexDirection: "column", cursor: "pointer", transition: "transform .15s, box-shadow .15s", overflow: "hidden" }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,.4)"; }}
                           onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: -2 }}>
                             <span style={{ fontSize: 12 }}>{icon}</span>
-                            <span style={{ fontSize: 9, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#8b949e", letterSpacing: ".3px" }}>{label}</span>
                           </div>
                           <div style={{ fontSize: 22, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1px", fontVariantNumeric: "tabular-nums", marginBottom: 0 }}>{val.toLocaleString()}</div>
-                          <div style={{ marginTop: "auto", padding: "0", borderTop: `1px solid ${color}22`, fontSize: 8, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LIST →</div>
+                          <div style={{ marginTop: "auto", padding: "0", borderTop: "1px solid #30363d", fontSize: 10, color: "#6e7681", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LIST →</div>
                         </div>
                       ))}
                     </div>
@@ -1669,8 +1716,9 @@
               <div style={{ padding: `${gap}px ${px}px ${gap * 2}px`, display: "flex", flexDirection: "column", gap, maxWidth: 1600, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
 
                 {tab === "logs" && (
-                  <AllLogsTab logs={logs} isA={isA} filter={filter} handleFilter={handleFilter} users={users}
-                    logActionFilter={logActionFilter} setLogActionFilter={setLogActionFilter} fmtAge={fmtAge} nv={nv} Badge={Badge} />
+                  <AllLogsTab logs={logs} isA={isA} userFilter={userFilter} handleFilter={handleFilter} users={users}
+                    logActionFilter={logActionFilter} setLogActionFilter={setLogActionFilter} fmtAge={fmtAge} nv={nv} Badge={Badge}
+                    orgFilter={orgFilter} setOrgFilter={setOrgFilter} allOrgs={allOrgs} getOrg={getOrg} />
                 )}
 
                 {tab === "analytics" && (
@@ -1749,6 +1797,18 @@
                       <p style={{ fontSize: 12, color: "#6e7681", marginTop: 2 }}>Monitor AI token consumption and financial efficiency</p>
                     </div>
 
+                    {isA && (
+                      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center", background: "rgba(255,255,255,.02)", padding: "10px 14px", borderRadius: 10, border: "1px solid #21262d" }}>
+                        <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 700, marginRight: 2 }}>🏢 Org Filter:</span>
+                        {["ALL", ...allOrgs].map(org => (
+                          <button key={org} onClick={() => { setOrgFilter(org); handleFilter("ALL"); }}
+                            style={{ padding: "4px 14px", borderRadius: 20, fontSize: 11, cursor: "pointer", fontWeight: orgFilter === org ? 700 : 500, border: `1px solid ${orgFilter === org ? "#58a6ff" : "#30363d"}`, background: orgFilter === org ? "rgba(88,166,255,.1)" : "transparent", color: orgFilter === org ? "#58a6ff" : "#8b949e", transition: "all .15s", fontFamily: "inherit" }}>
+                            {org === "ALL" ? "All" : org}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     <div style={{ display: "flex", alignItems: "center", gap: 30, marginBottom: 20, borderBottom: "1px solid #21262d", paddingRight: 10 }}>
                       <div onClick={() => setSubTokenTab("used")} style={{
                         paddingBottom: 10, cursor: "pointer",
@@ -1764,22 +1824,9 @@
                       }}>Tokens Saved (Estimated)</div>
 
                       {isA && (
-                        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 600 }}>Filter:</span>
-                          <select value={filter} onChange={e => { handleFilter(e.target.value); }}
-                            style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 6, padding: "5px 12px", fontSize: 11, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
-                            <option value="ALL">All Users</option>
-                            {users.map(u => <option key={u.user_id} value={u.user_id}>{u.display_name || u.user_id}</option>)}
-                          </select>
-                          <div style={{ width: 1, height: 16, background: "#30363d", margin: "0 4px" }} />
-                          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                            <span style={{ position: "absolute", left: 10, fontSize: 12, color: "#484f58", pointerEvents: "none" }}>🔍</span>
-                            <input value={filter === "ALL" ? "" : filter} onChange={e => handleFilter(e.target.value.trim() || "ALL")}
-                              placeholder="Search user..."
-                              style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 6, padding: "5px 12px 5px 30px", fontSize: 11, outline: "none", fontFamily: "inherit", width: 180, transition: "border-color .15s" }}
-                              onFocus={e => e.currentTarget.style.borderColor = "#58a6ff"}
-                              onBlur={e => { e.currentTarget.style.borderColor = "#30363d"; }} />
-                          </div>
+                        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 600 }}>User Search:</span>
+                          <SearchableUserFilter users={users} filter={userFilter} handleFilter={handleFilter} selectedOrg={orgFilter} getOrg={getOrg} placeholder={orgFilter === "ALL" ? "Search all users..." : `Search ${orgFilter} users...`} />
                         </div>
                       )}
                     </div>
