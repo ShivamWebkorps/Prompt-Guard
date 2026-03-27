@@ -112,10 +112,10 @@ public class DatabaseInitializer implements ApplicationRunner {
         insertUser("shivam", "Shivam", "USER",  102);
         insertUser("raj",    "Raj",    "USER",  101);
 
-        // Update display names if needed (though insertUser handles it)
+        // Ensure correct display names
         try {
-            db.update("UPDATE users SET display_name = 'Software' WHERE user_id = 'rohan'");
-            db.update("UPDATE users SET display_name = 'Telecomm' WHERE user_id = 'kushal'");
+            db.update("UPDATE users SET display_name = 'Rohan' WHERE user_id = 'rohan'");
+            db.update("UPDATE users SET display_name = 'Kushal' WHERE user_id = 'kushal'");
         } catch (Exception e) {
             log.warn("User display name update: {}", e.getMessage());
         }

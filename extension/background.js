@@ -13,8 +13,8 @@ async function getSettings() {
   return new Promise((resolve) => {
     chrome.storage.sync.get(["userId", "subUser", "apiUrl"], (data) => {
       resolve({
-        userId: (data.userId && data.userId.trim()) ? data.userId.trim() : "anonymous-user",
-        subUser: (data.subUser && data.subUser.trim()) ? data.subUser.trim() : "anonymous-user",
+        userId: (data.userId && data.userId.trim()) ? data.userId.trim().toLowerCase() : "anonymous-user",
+        subUser: (data.subUser && data.subUser.trim()) ? data.subUser.trim().toLowerCase() : "anonymous-user",
         apiUrl: (data.apiUrl && data.apiUrl.trim()) ? data.apiUrl.trim() : "http://localhost:8082",
       });
     });

@@ -23,9 +23,11 @@ async function detectBrowser() {
 
 const ORG_MAP = {
   "101": "Telecomm",
-  "kushal-user": "Telecomm",
+  "kushal": "Telecomm",
   "102": "Software",
-  "rohan-user": "Software"
+  "rohan": "Software",
+  "software": "Software",
+  "telecomm": "Telecomm"
 };
 const orgLabel = (id) => ORG_MAP[id] || id;
 
@@ -65,7 +67,7 @@ function updateOrgDisplay() {
     warn?.classList.remove("show");
     inp?.classList.remove("warn");
     if (res) {
-      const label = ORG_MAP[val];
+      const label = ORG_MAP[val.toLowerCase()];
       res.textContent = label ? `(${label})` : "";
     }
   }
@@ -176,8 +178,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── Save settings ────────────────────────────
   document.getElementById("saveBtn")?.addEventListener("click", () => {
-    const userId  = document.getElementById("userIdInput").value.trim();
-    const subUser = document.getElementById("subUserInput").value.trim();
+    const userId  = document.getElementById("userIdInput").value.trim().toLowerCase();
+    const subUser = document.getElementById("subUserInput").value.trim().toLowerCase();
     const apiUrl  = document.getElementById("apiUrlInput").value.trim() || "http://localhost:8082";
     const enabled = document.getElementById("enabledToggle")?.checked ?? true;
     const btn     = document.getElementById("saveBtn");
@@ -214,8 +216,8 @@ async function runTestPrompt() {
   testBtn.textContent = "⏳ Checking...";
 
   const apiBase  = document.getElementById("apiUrlInput")?.value?.trim() || "http://localhost:8082";
-  const userId   = document.getElementById("userIdInput")?.value?.trim() || "popup-test";
-  const subUser  = document.getElementById("subUserInput")?.value?.trim() || "test-user";
+  const userId   = document.getElementById("userIdInput")?.value?.trim()?.toLowerCase() || "popup-test";
+  const subUser  = document.getElementById("subUserInput")?.value?.trim()?.toLowerCase() || "test-user";
 
   const resultBox      = document.getElementById("resultBox");
   const resultAction   = document.getElementById("resultAction");

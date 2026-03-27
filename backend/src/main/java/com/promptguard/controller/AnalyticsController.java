@@ -100,7 +100,10 @@ public class AnalyticsController {
     @GetMapping("/users")
     public ResponseEntity<?> getUserList() {
         List<Map<String, Object>> rows = db.queryForList(
-                "SELECT user_id, display_name, role FROM users ORDER BY role DESC, user_id ASC");
+                "SELECT u.user_id, u.display_name, u.role, o.org_name " +
+                "FROM users u " +
+                "LEFT JOIN organizations o ON u.org_id = o.org_id " +
+                "ORDER BY u.role DESC, u.user_id ASC");
         return ResponseEntity.ok(rows);
     }
 

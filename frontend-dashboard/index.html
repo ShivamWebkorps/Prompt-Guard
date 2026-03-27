@@ -441,11 +441,11 @@
                               {isA ? "👑" : "👤"}
                             </div>
                             <div>
-                              <div style={{ fontSize: 13, fontWeight: 600, color: "#e6edf3" }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>
                                 {u.display_name || u.user_id}
                               </div>
-                              <div style={{ fontSize: 11, color: "#6e7681", fontFamily: "'JetBrains Mono',monospace" }}>
-                                {u.user_id}
+                              <div style={{ fontSize: 10, color: "#388bfd", fontWeight: 700, letterSpacing: ".5px", textTransform: "uppercase" }}>
+                                {u.org_name || (u.role === 'ADMIN' ? 'System' : 'Global')}
                               </div>
                             </div>
                           </div>
