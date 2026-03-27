@@ -530,7 +530,7 @@
           },
         });
         return () => { try { inst.current?.destroy(); } catch { } };
-      }, [logs]);
+      }, [logs, daysFilter]);
       return <canvas ref={ref} style={{ width: "100%", height: "100%" }} />;
     });
 
@@ -1384,8 +1384,8 @@
       const load = (f = userFilter) => {
         setLoading(true);
         const logsUrl = isA
-          ? `${API}/api/analytics/recent-logs?limit=50&userId=${f === "ALL" ? "" : f}`
-          : `${API}/api/analytics/my-prompts?userId=${user.userId}&limit=50`;
+          ? `${API}/api/analytics/recent-logs?limit=200&userId=${f === "ALL" ? "" : f}`
+          : `${API}/api/analytics/my-prompts?userId=${user.userId}&limit=200`;
 
         Promise.all([
           fetch(`${API}/api/analytics/risk-summary`).then(r => r.json()).catch(() => ({})),
@@ -1409,12 +1409,25 @@
 
       useEffect(() => { load(); }, []);
 
-      const { summary: S, tools, risks, logs, users } = data;
+      const { summary: S, tools: toolsRaw, risks: risksRaw, logs, users } = data;
 
       const safe = nv(S.allowedPrompts), red = nv(S.redactedPrompts), blk = nv(S.blockedPrompts), crit = nv(S.alertedPrompts), tot = nv(S.totalPrompts);
 
       const orgFilteredLogs = isA && orgFilter !== "ALL" ? logs.filter(l => getOrg(l.userId || l.user_id) === orgFilter) : logs;
       const orgFilteredUsers = isA && orgFilter !== "ALL" ? users.filter(u => getOrg(u.user_id) === orgFilter) : users;
+
+      // DERIVE CHARTS DATA FROM FILTERED LOGS
+      const tools = Object.entries(orgFilteredLogs.reduce((acc, l) => {
+        const t = l.tool || "Unknown";
+        acc[t] = (acc[t] || 0) + 1;
+        return acc;
+      }, {})).map(([tool, count]) => ({ tool, count }));
+
+      const risks = Object.entries(orgFilteredLogs.reduce((acc, l) => {
+        const r = l.highestRiskType || l.highest_risk_type || "NONE";
+        acc[r] = (acc[r] || 0) + 1;
+        return acc;
+      }, {})).map(([type, count]) => ({ type, count }));
 
       const userTot = orgFilteredLogs.length;
       const userSafe = orgFilteredLogs.filter(l => l.action === "ALLOW").length;
@@ -1435,6 +1448,20 @@
       const dTkSaved = isA ? tkSaved : userTkSaved;
       const dCUsed = isA ? cUsed : userCUsed;
       const dCSaved = isA ? cSaved : userCSaved;
+
+      // TOKEN TAB FILTERING
+      const usedLogsRaw = data.tokenData?.usedLogs || [];
+      const savedLogsRaw = data.tokenData?.savedLogs || [];
+      const orgFilteredTokenUsedLogs = isA && orgFilter !== "ALL" ? usedLogsRaw.filter(l => getOrg(l.userId) === orgFilter) : usedLogsRaw;
+      const orgFilteredTokenSavedLogs = isA && orgFilter !== "ALL" ? savedLogsRaw.filter(l => getOrg(l.userId) === orgFilter) : savedLogsRaw;
+
+      const displayTokenTotal = subTokenTab === "used"
+        ? orgFilteredTokenUsedLogs.reduce((a, l) => a + nv(l.tokens), 0)
+        : orgFilteredTokenSavedLogs.reduce((a, l) => a + nv(l.saved), 0);
+
+      const displayCostTotal = subTokenTab === "used"
+        ? orgFilteredTokenUsedLogs.reduce((a, l) => a + nv(l.cost), 0)
+        : orgFilteredTokenSavedLogs.reduce((a, l) => a + nv(l.value), 0);
 
       const comply = [
         { label: "GDPR", status: br < 15 ? "Compliant" : "Needs Review" },
@@ -1749,8 +1776,18 @@
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap }}>
                       <div className="card" style={{ display: "flex", flexDirection: "column" }}>
-                        <CH icon="📈" title="Prompt Activity (7 days)" />
-                        <div style={{ padding: "10px 18px 16px", height: isMobile ? 200 : 260, position: "relative" }}><LineChart logs={orgFilteredLogs} /></div>
+                        <CH icon="📈" title="Prompt Activity" right={
+                          <select value={promptActivityFilter} onChange={e => setPromptActivityFilter(e.target.value)}
+                            style={{ background: "#161b22", border: "1px solid #30363d", color: "#8b949e", borderRadius: 6, padding: "2px 8px", fontSize: 10, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                            <option value="7">Last 7 days</option>
+                            <option value="15">Last 15 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">All time</option>
+                          </select>
+                        } />
+                        <div style={{ padding: "10px 18px 16px", height: isMobile ? 200 : 260, position: "relative" }}>
+                          <LineChart logs={orgFilteredLogs} daysFilter={Number(promptActivityFilter)} />
+                        </div>
                       </div>
                       <div className="card" style={{ display: "flex", flexDirection: "column" }}>
                         <CH icon="⚙️" title="Top Risk Categories" />
@@ -1850,7 +1887,7 @@
                           {subTokenTab === "used" ? "TOTAL TOKENS USED" : "TOTAL TOKENS SAVED"}
                         </div>
                         <div style={{ color: "#f0f6fc", fontSize: 38, fontWeight: 800, letterSpacing: "-1px" }}>
-                          {nv(subTokenTab === "used" ? data.tokenData?.totalTokensUsed : data.tokenData?.totalTokensSaved).toLocaleString()}
+                          {displayTokenTotal.toLocaleString()}
                         </div>
                       </div>
                       <div style={{ flex: 1, minWidth: 260, background: subTokenTab === "used" ? "linear-gradient(135deg,#0d2a45,#051625)" : "linear-gradient(135deg,#0d452a,#052516)", border: `1px solid ${subTokenTab === "used" ? "#1f6feb33" : "#2ea04333"}`, borderRadius: 12, padding: "20px 24px", boxShadow: "0 4px 20px rgba(0,0,0,.3)" }}>
@@ -1858,7 +1895,7 @@
                           {subTokenTab === "used" ? "ESTIMATED ACTUAL COST" : "TOTAL COST SAVINGS"}
                         </div>
                         <div style={{ color: "#f0f6fc", fontSize: 38, fontWeight: 800, letterSpacing: "-1px" }}>
-                          ${nv(subTokenTab === "used" ? data.tokenData?.totalCostUsed : data.tokenData?.totalCostSaved).toFixed(4)}
+                          ${displayCostTotal.toFixed(4)}
                         </div>
                       </div>
                     </div>
@@ -1881,9 +1918,9 @@
                             </tr>
                           </thead>
                           <tbody>
-                            {(subTokenTab === "used" ? (data.tokenData?.usedLogs || []) : (data.tokenData?.savedLogs || [])).length === 0 ? (
-                              <tr><td colSpan="5" style={{ padding: 40, textAlign: "center", color: "#484f58", fontSize: 13 }}>No token data available yet.</td></tr>
-                            ) : (subTokenTab === "used" ? (data.tokenData?.usedLogs || []) : (data.tokenData?.savedLogs || [])).map((l, i) => (
+                            {(subTokenTab === "used" ? orgFilteredTokenUsedLogs : orgFilteredTokenSavedLogs).length === 0 ? (
+                              <tr><td colSpan="6" style={{ padding: 40, textAlign: "center", color: "#484f58", fontSize: 13 }}>No token data available for {orgFilter === "ALL" ? "all organizations" : orgFilter}.</td></tr>
+                            ) : (subTokenTab === "used" ? orgFilteredTokenUsedLogs : orgFilteredTokenSavedLogs).map((l, i) => (
                               <tr key={i} className="tr-hover" style={{ borderBottom: "1px solid #21262d55" }}>
                                 <td style={{ padding: 14, color: "#8b949e", fontFamily: "'JetBrains Mono',monospace" }}>{fmtAge(l.timestamp)}</td>
                                 <td style={{ padding: 14, color: "#58a6ff", fontWeight: 700 }}>{l.userId}</td>
