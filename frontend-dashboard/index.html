@@ -442,7 +442,7 @@
                             </div>
                             <div>
                               <div style={{ fontSize: 13, fontWeight: 600, color: "#e6edf3" }}>
-                                {u.user_id === "kushal-user" ? "Telecomm" : u.user_id === "rohan-user" ? "Software" : u.display_name || u.user_id}
+                                {u.display_name || u.user_id}
                               </div>
                               <div style={{ fontSize: 11, color: "#6e7681", fontFamily: "'JetBrains Mono',monospace" }}>
                                 {u.user_id}
@@ -935,7 +935,7 @@
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr style={{ background: "rgba(0,0,0,.3)" }}>
-                  {(isA ? ["Time", "User", "Tool", "Browser", "Risk Type", "Score", "Action", "Reason", "Prompt"] : ["Time", "Tool", "Browser", "Risk Type", "Score", "Action", "Reason", "Prompt"]).map(h => (
+                  {(isA ? ["Time", "User", "Tool", "Risk Type", "Score", "Action", "Reason", "Prompt"] : ["Time", "Tool", "Risk Type", "Score", "Action", "Reason", "Prompt"]).map(h => (
                     <th key={h} style={{ padding: "10px 14px", textAlign: "left", color: "#6e7681", fontWeight: 600, fontSize: 10, letterSpacing: ".8px", textTransform: "uppercase", whiteSpace: "nowrap", borderBottom: "1px solid #21262d" }}>{h}</th>
                   ))}
                 </tr>
@@ -946,7 +946,7 @@
                     <div style={{ fontSize: 26, marginBottom: 10 }}>📭</div>
                     <div style={{ fontSize: 13, color: "#6e7681" }}>{logs.length === 0 ? "No logs yet." : "No logs match the selected filter."}</div>
                   </td></tr>
-                ) : actionFilteredLogs.map((l, i) => {
+                ) : orgFilteredLogs.map((l, i) => {
                   const theme = getTheme(l.action);
                   return (
                     <tr key={i} className="tr-hover" style={{ borderBottom: "1px solid rgba(255,255,255,.025)" }}>
@@ -955,7 +955,6 @@
                       <td style={{ padding: "9px 14px" }}>
                         <span style={{ background: "rgba(56,139,253,.1)", border: "1px solid rgba(56,139,253,.2)", color: "#58a6ff", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>{l.tool || "—"}</span>
                       </td>
-                      <td style={{ padding: "9px 14px", color: "#3fb950", fontWeight: 600 }}>{l.browserName || l.browser_name || "—"}</td>
                       <td style={{ padding: "9px 14px" }}>
                         <span style={{ display: "inline-block", padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, letterSpacing: ".5px", background: "rgba(255,255,255,.05)", color: "#c9d1d9" }}>{l.highestRiskType || l.highest_risk_type || "NONE"}</span>
                       </td>
@@ -1404,13 +1403,16 @@
 
       const safe = nv(S.allowedPrompts), red = nv(S.redactedPrompts), blk = nv(S.blockedPrompts), crit = nv(S.alertedPrompts), tot = nv(S.totalPrompts);
 
-      const userTot = logs.length;
-      const userSafe = logs.filter(l => l.action === "ALLOW").length;
-      const userRed = logs.filter(l => l.action === "REDACT").length;
-      const userBlk = logs.filter(l => l.action === "BLOCK").length;
-      const userCrit = logs.filter(l => l.action === "ALERT").length;
+      const orgFilteredLogs = isA && orgFilter !== "ALL" ? logs.filter(l => getOrg(l.userId || l.user_id) === orgFilter) : logs;
+      const orgFilteredUsers = isA && orgFilter !== "ALL" ? users.filter(u => getOrg(u.user_id) === orgFilter) : users;
 
-      const displaySafe = isA ? safe : userSafe, displayRed = isA ? red : userRed, displayBlk = isA ? blk : userBlk, displayCrit = isA ? crit : userCrit, displayTot = isA ? tot : userTot;
+      const userTot = orgFilteredLogs.length;
+      const userSafe = orgFilteredLogs.filter(l => l.action === "ALLOW").length;
+      const userRed = orgFilteredLogs.filter(l => l.action === "REDACT").length;
+      const userBlk = orgFilteredLogs.filter(l => l.action === "BLOCK").length;
+      const userCrit = orgFilteredLogs.filter(l => l.action === "ALERT").length;
+
+      const displaySafe = userSafe, displayRed = userRed, displayBlk = userBlk, displayCrit = userCrit, displayTot = userTot;
       const br = displayTot > 0 ? Math.round(displayBlk / displayTot * 100) : 0;
 
       const tkUsed = nv(S.tokensUsed), tkSaved = nv(S.tokensSaved), cUsed = nv(S.costUsed), cSaved = nv(S.costSaved);
@@ -1435,8 +1437,6 @@
         ? [{ k: "overview", l: "Home" }, { k: "logs", l: "All Logs" }, { k: "analytics", l: "Analytics" }, { k: "tokens", l: "Tokens" }, { k: "policies", l: "Keyword Policies" }, { k: "test", l: "Test Prompt" }]
         : [{ k: "overview", l: "Home" }, { k: "logs", l: "My Logs" }, { k: "keywords", l: "My Keywords" }, { k: "test", l: "Test Prompt" }];
 
-      const orgFilteredLogs = isA && orgFilter !== "ALL" ? logs.filter(l => getOrg(l.userId || l.user_id) === orgFilter) : logs;
-      const orgFilteredUsers = isA && orgFilter !== "ALL" ? users.filter(u => getOrg(u.user_id) === orgFilter) : users;
 
       const px = isMobile ? 12 : 20, gap = 12;
 
@@ -1610,7 +1610,7 @@
                         <option value="90">All time</option>
                       </select>
                     </div>
-                    <div style={{ flex: 1, padding: "8px 14px 10px", minHeight: 0, overflow: "hidden", position: "relative" }}><LineChart logs={logs} daysFilter={Number(promptActivityFilter)} /></div>
+                    <div style={{ flex: 1, padding: "8px 14px 10px", minHeight: 0, overflow: "hidden", position: "relative" }}><LineChart logs={orgFilteredLogs} daysFilter={Number(promptActivityFilter)} /></div>
                   </div>
                   <div className="card fade-up" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
                     <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid #21262d", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
@@ -1629,13 +1629,13 @@
                           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                             <thead style={{ position: "sticky", top: 0, background: "#161b22", zIndex: 1, borderBottom: "1px solid #21262d" }}>
                               <tr style={{ background: "rgba(0,0,0,.4)" }}>
-                                {(isA ? ["Timestamp", "User", "Risk Type", "Action", "Browser"] : ["Timestamp", "Risk Type", "Action", "Browser"]).map(h => (
+                                {(isA ? ["Timestamp", "User", "Risk Type", "Action"] : ["Timestamp", "Risk Type", "Action"]).map(h => (
                                   <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#6e7681", fontWeight: 600, fontSize: 10, letterSpacing: ".7px", textTransform: "uppercase", borderBottom: "1px solid #21262d", whiteSpace: "nowrap" }}>{h}</th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody>
-                              {logs.slice(0, 10).map((l, i) => (
+                              {orgFilteredLogs.slice(0, 10).map((l, i) => (
                                 <tr key={i} className="tr-hover" style={{ borderBottom: "1px solid rgba(255,255,255,.035)" }}>
                                   <td style={{ padding: "10px 12px", color: "#6e7681", fontFamily: "'JetBrains Mono',monospace", fontSize: 11 }}>{fmtAge(l.timestamp || l.created_at)}</td>
                                   {isA && <td style={{ padding: "10px 12px", color: "#79c0ff", fontWeight: 700 }}>{l.userId || l.user_id || "—"}</td>}
@@ -1643,7 +1643,6 @@
                                     <span style={{ display: "inline-block", padding: "3px 8px", borderRadius: 5, fontSize: 10, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "#c9d1d9" }}>{l.highestRiskType || l.highest_risk_type || "NONE"}</span>
                                   </td>
                                   <td style={{ padding: "10px 12px" }}><Badge action={l.action} /></td>
-                                  <td style={{ padding: "10px 12px", color: "#3fb950", fontSize: 11, fontWeight: 600 }}>{l.browserName || l.browser_name || "—"}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -1741,7 +1740,7 @@
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap }}>
                       <div className="card" style={{ display: "flex", flexDirection: "column" }}>
                         <CH icon="📈" title="Prompt Activity (7 days)" />
-                        <div style={{ padding: "10px 18px 16px", height: isMobile ? 200 : 260, position: "relative" }}><LineChart logs={logs} /></div>
+                        <div style={{ padding: "10px 18px 16px", height: isMobile ? 200 : 260, position: "relative" }}><LineChart logs={orgFilteredLogs} /></div>
                       </div>
                       <div className="card" style={{ display: "flex", flexDirection: "column" }}>
                         <CH icon="⚙️" title="Top Risk Categories" />
@@ -1776,9 +1775,9 @@
                       <div className="card" id="active-users-list-card" style={{ display: "flex", flexDirection: "column" }}>
                         <CH icon="👥" title="Active Users" />
                         <div className="scroll-y" style={{ padding: "0 18px 16px", maxHeight: 260, overflowY: "auto" }}>
-                          {users.length === 0 ? (
+                          {orgFilteredUsers.length === 0 ? (
                             <div style={{ padding: 30, textAlign: "center", color: "#484f58", fontSize: 12 }}>No users found.</div>
-                          ) : users.map(u => (
+                          ) : orgFilteredUsers.map(u => (
                             <div key={u.user_id} style={{ padding: "10px 12px", borderBottom: "1px solid #21262d", display: "flex", alignItems: "center", gap: 10 }}>
                               <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.role === "ADMIN" ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.15)", border: `1px solid ${u.role === "ADMIN" ? "#a371f733" : "#1f6feb33"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>👤</div>
                               <div style={{ flex: 1 }}>
