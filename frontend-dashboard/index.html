@@ -936,7 +936,17 @@
               <thead>
                 <tr style={{ background: "rgba(0,0,0,.3)" }}>
                   {(isA ? ["Time", "User", "Tool", "Risk Type", "Score", "Action", "Reason", "Prompt"] : ["Time", "Tool", "Risk Type", "Score", "Action", "Reason", "Prompt"]).map(h => (
-                    <th key={h} style={{ padding: "10px 14px", textAlign: "left", color: "#6e7681", fontWeight: 600, fontSize: 10, letterSpacing: ".8px", textTransform: "uppercase", whiteSpace: "nowrap", borderBottom: "1px solid #21262d" }}>{h}</th>
+                    <th key={h} style={{
+                      padding: "10px 14px",
+                      textAlign: (h === "Score" || h === "Prompt") ? "center" : "left",
+                      color: "#6e7681",
+                      fontWeight: 600,
+                      fontSize: 10,
+                      letterSpacing: ".8px",
+                      textTransform: "uppercase",
+                      whiteSpace: "nowrap",
+                      borderBottom: "1px solid #21262d"
+                    }}>{h}</th>
                   ))}
                 </tr>
               </thead>

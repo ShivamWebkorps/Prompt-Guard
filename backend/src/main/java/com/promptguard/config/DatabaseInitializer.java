@@ -99,33 +99,41 @@ public class DatabaseInitializer implements ApplicationRunner {
         insertOrg(102, "Software");
 
         // ── Step 5: Seed users ────────────────────────────────────────────────
-        insertUser("admin-user",  "Admin",  "ADMIN", null);
-        insertUser("rohan-user",  "Rohan",  "USER",  102);
-        insertUser("kushal-user", "Kushal", "USER",  101);
-
-        // Update display names to Telecomm and Software for existing users
+        // Standardizing IDs: rohan, kushal, shivam, raj, admin
+        // Proactive cleanup of legacy -user IDs
         try {
-            db.update("DELETE FROM users WHERE user_id IN ('101', '102')");
-            db.update("UPDATE users SET display_name = 'Software' WHERE user_id = 'rohan-user'");
-            db.update("UPDATE users SET display_name = 'Telecomm' WHERE user_id = 'kushal-user'");
+            db.update("DELETE FROM users WHERE user_id LIKE '%-user'");
+            log.info("Cleanup: removed legacy -user accounts");
+        } catch (Exception e) {}
+
+        insertUser("admin",  "Admin",  "ADMIN", null);
+        insertUser("rohan",  "Rohan",  "USER",  102);
+        insertUser("kushal", "Kushal", "USER",  101);
+        insertUser("shivam", "Shivam", "USER",  102);
+        insertUser("raj",    "Raj",    "USER",  101);
+
+        // Update display names if needed (though insertUser handles it)
+        try {
+            db.update("UPDATE users SET display_name = 'Software' WHERE user_id = 'rohan'");
+            db.update("UPDATE users SET display_name = 'Telecomm' WHERE user_id = 'kushal'");
         } catch (Exception e) {
             log.warn("User display name update: {}", e.getMessage());
         }
 
         // Patch org_id for users already in DB without it
         try {
-            db.update("UPDATE users SET org_id = 102 WHERE user_id = 'rohan-user'  AND org_id IS NULL");
-            db.update("UPDATE users SET org_id = 101 WHERE user_id = 'kushal-user' AND org_id IS NULL");
+            db.update("UPDATE users SET org_id = 102 WHERE user_id = 'rohan'  AND org_id IS NULL");
+            db.update("UPDATE users SET org_id = 101 WHERE user_id = 'kushal' AND org_id IS NULL");
         } catch (Exception e) {
             log.warn("User org_id patch: {}", e.getMessage());
         }
 
         // ── Step 6: Migrate old slug-based policy rows → numeric org_id ───────
         try {
-            int r = db.update("UPDATE user_keyword_policies SET user_id='102' WHERE user_id='rohan-user'");
-            int k = db.update("UPDATE user_keyword_policies SET user_id='101' WHERE user_id='kushal-user'");
-            if (r > 0) log.info("Migration: {} rohan-user policy rows → org 102", r);
-            if (k > 0) log.info("Migration: {} kushal-user policy rows → org 101", k);
+            int r = db.update("UPDATE user_keyword_policies SET user_id='102' WHERE user_id='rohan'");
+            int k = db.update("UPDATE user_keyword_policies SET user_id='101' WHERE user_id='kushal'");
+            if (r > 0) log.info("Migration: {} rohan policy rows → org 102", r);
+            if (k > 0) log.info("Migration: {} kushal policy rows → org 101", k);
         } catch (Exception e) {
             log.warn("Policy slug→orgId migration: {}", e.getMessage());
         }

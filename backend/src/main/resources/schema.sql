@@ -50,7 +50,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_risk    ON audit_logs(highest_risk_type);
 -- ── User Keyword Policies Table ────────────────
 CREATE TABLE IF NOT EXISTS user_keyword_policies (
     id            SERIAL       PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL, -- Parent user (e.g. rohan-user)
+    user_id       VARCHAR(100) NOT NULL, -- Parent user (e.g. )
     sub_user      VARCHAR(100) NOT NULL, -- Child user (e.g. user1)
     keyword_list  TEXT         NOT NULL, -- List of words to check
     allow_col     BOOLEAN      DEFAULT FALSE,
