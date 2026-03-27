@@ -766,11 +766,11 @@
                     ["Time", (log.timestamp || log.created_at || "—").replace("T", " ").replace(/\.\d+.*/, "")],
                   ];
                   if (log.action === "BLOCK" || log.action === "ALERT" || log.action === "REDACT") {
-                      promptStats.push(["Tokens Saved", Number(log.tokensSaved ?? log.tokens_saved ?? 0).toLocaleString()]);
-                      promptStats.push(["Cost Saved", `$${Number(log.costSaved ?? log.cost_saved ?? 0).toFixed(4)}`]);
+                    promptStats.push(["Tokens Saved", Number(log.tokensSaved ?? log.tokens_saved ?? 0).toLocaleString()]);
+                    promptStats.push(["Cost Saved", `$${Number(log.costSaved ?? log.cost_saved ?? 0).toFixed(4)}`]);
                   } else {
-                      promptStats.push(["Tokens Used", Number(log.tokensUsed ?? log.tokens_used ?? 0).toLocaleString()]);
-                      promptStats.push(["Cost Used", `$${Number(log.costUsed ?? log.cost_used ?? 0).toFixed(4)}`]);
+                    promptStats.push(["Tokens Used", Number(log.tokensUsed ?? log.tokens_used ?? 0).toLocaleString()]);
+                    promptStats.push(["Cost Used", `$${Number(log.costUsed ?? log.cost_used ?? 0).toFixed(4)}`]);
                   }
                   return promptStats.map(([k, v]) => (
                     <div key={k} style={{ background: "rgba(0,0,0,.2)", borderRadius: 8, padding: "8px 11px", border: "1px solid #30363d" }}>
@@ -1128,26 +1128,26 @@
           // Remove the keyword from ALL policies for this org that contain it
           // This ensures "only 1 times allowed" in the display and database
           const policiesFound = policies.filter(p => (p.keywordList || p.keyword_list || "").toLowerCase().includes(kwToRemove.toLowerCase()));
-          
+
           for (const p of policiesFound) {
             const pid = p.id;
             const currentKws = (p.keywordList || p.keyword_list || "").split(",").map(k => k.trim()).filter(Boolean);
             const remaining = currentKws.filter(k => k.toLowerCase() !== kwToRemove.toLowerCase());
-            
+
             // Delete old policy
             await fetch(`${API}/api/v1/policies/${pid}`, { method: "DELETE" });
-            
+
             // If there's anything left, re-insert
             if (remaining.length > 0) {
-              const body = { 
-                userId: p.userId || p.user_id, 
-                subUser: p.subUser || p.sub_user, 
-                keywordList: remaining.join(","), 
-                blockCol: p.blockCol || p.block_col || false, 
-                criticalCol: p.criticalCol || p.critical_col || false, 
-                redactedCol: p.redactedCol || p.redacted_col || false, 
+              const body = {
+                userId: p.userId || p.user_id,
+                subUser: p.subUser || p.sub_user,
+                keywordList: remaining.join(","),
+                blockCol: p.blockCol || p.block_col || false,
+                criticalCol: p.criticalCol || p.critical_col || false,
+                redactedCol: p.redactedCol || p.redacted_col || false,
                 allowCol: p.allowCol || p.allow_col || false,
-                promptCol: p.promptCol || p.prompt_col || "" 
+                promptCol: p.promptCol || p.prompt_col || ""
               };
               await fetch(`${API}/api/v1/policies`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
             }
@@ -1364,12 +1364,12 @@
 
       const displaySafe = isA ? safe : userSafe, displayRed = isA ? red : userRed, displayBlk = isA ? blk : userBlk, displayCrit = isA ? crit : userCrit, displayTot = isA ? tot : userTot;
       const br = displayTot > 0 ? Math.round(displayBlk / displayTot * 100) : 0;
-      
+
       const tkUsed = nv(S.tokensUsed), tkSaved = nv(S.tokensSaved), cUsed = nv(S.costUsed), cSaved = nv(S.costSaved);
-      const userTkUsed = logs.reduce((a,l) => a + nv(l.tokensUsed), 0);
-      const userTkSaved = logs.reduce((a,l) => a + nv(l.tokensSaved), 0);
-      const userCUsed = logs.reduce((a,l) => a + nv(l.costUsed), 0);
-      const userCSaved = logs.reduce((a,l) => a + nv(l.costSaved), 0);
+      const userTkUsed = logs.reduce((a, l) => a + nv(l.tokensUsed), 0);
+      const userTkSaved = logs.reduce((a, l) => a + nv(l.tokensSaved), 0);
+      const userCUsed = logs.reduce((a, l) => a + nv(l.costUsed), 0);
+      const userCSaved = logs.reduce((a, l) => a + nv(l.costSaved), 0);
 
       const dTkUsed = isA ? tkUsed : userTkUsed;
       const dTkSaved = isA ? tkSaved : userTkSaved;
@@ -1412,18 +1412,18 @@
             )}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? 7 : 9 }}>
               {!isMobile && <LiveClock />}
-              <div 
+              <div
                 title="Refresh"
                 onClick={() => window.location.reload()}
-                style={{ 
-                  cursor: "pointer", 
-                  background: "rgba(255,255,255,.04)", 
-                  border: "1px solid #30363d", 
-                  borderRadius: 8, 
-                  width: 30, 
-                  height: 30, 
-                  display: "flex", 
-                  alignItems: "center", 
+                style={{
+                  cursor: "pointer",
+                  background: "rgba(255,255,255,.04)",
+                  border: "1px solid #30363d",
+                  borderRadius: 8,
+                  width: 30,
+                  height: 30,
+                  display: "flex",
+                  alignItems: "center",
                   justifyContent: "center",
                   color: "#8b949e",
                   transition: "all .15s"
@@ -1438,33 +1438,33 @@
               </div>
               {/* USER PROFILE DROPDOWN */}
               <div style={{ position: "relative" }}>
-                  <div onClick={() => setShowUserDropdown(!showUserDropdown)} 
-                       style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px 4px 6px", borderRadius: 24, cursor: "pointer", background: "rgba(255,255,255,.04)", border: "1px solid #30363d", transition: "all .15s" }}
-                       onMouseEnter={e => e.currentTarget.style.borderColor = "#58a6ff"}
-                       onMouseLeave={e => e.currentTarget.style.borderColor = "#30363d"}>
-                      <img src="./premium_avatar.png" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #30363d", background: "#0d1117" }} alt="User" />
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#e6edf3" }}>{isMobile ? user.userId.split("-")[0] : user.userId}</span>
-                      <span style={{ fontSize: 10, color: "#8b949e" }}>▼</span>
-                  </div>
+                <div onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px 4px 6px", borderRadius: 24, cursor: "pointer", background: "rgba(255,255,255,.04)", border: "1px solid #30363d", transition: "all .15s" }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = "#58a6ff"}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = "#30363d"}>
+                  <img src="./premium_avatar.png" style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #30363d", background: "#0d1117" }} alt="User" />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#e6edf3" }}>{isMobile ? user.userId.split("-")[0] : user.userId}</span>
+                  <span style={{ fontSize: 10, color: "#8b949e" }}>▼</span>
+                </div>
 
-                  {showUserDropdown && (
-                    <>
-                      <div onClick={() => setShowUserDropdown(false)} style={{ position: "fixed", inset: 0, zIndex: 998 }} />
-                      <div className="fade-up" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 220, background: "#161b22", border: "1px solid #30363d", borderRadius: 10, padding: 8, zIndex: 999, boxShadow: "0 8px 32px rgba(0,0,0,.5)" }}>
-                          <div style={{ padding: "8px 12px", borderBottom: "1px solid #21262d", marginBottom: 6 }}>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: "#f0f6fc" }}>{user.name || user.userId}</div>
-                              <div style={{ fontSize: 10, color: "#8b949e", marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
-                                  <span style={{ padding: "2px 6px", borderRadius: 4, background: isA ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.15)", color: isA ? "#a371f7" : "#58a6ff", fontWeight: 800, fontSize: 8 }}>{isA ? "ADMIN" : "USER"}</span>
-                                  <span>{user.userId}</span>
-                              </div>
-                          </div>
-                          <button onClick={onLogout} className="btn-danger" style={{ width: "100%", padding: "8px 12px", borderRadius: 6, display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer", border: "none" }}>
-                              <span>🚪</span>
-                              <span style={{ fontWeight: 600 }}>Sign Out</span>
-                          </button>
+                {showUserDropdown && (
+                  <>
+                    <div onClick={() => setShowUserDropdown(false)} style={{ position: "fixed", inset: 0, zIndex: 998 }} />
+                    <div className="fade-up" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 220, background: "#161b22", border: "1px solid #30363d", borderRadius: 10, padding: 8, zIndex: 999, boxShadow: "0 8px 32px rgba(0,0,0,.5)" }}>
+                      <div style={{ padding: "8px 12px", borderBottom: "1px solid #21262d", marginBottom: 6 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#f0f6fc" }}>{user.name || user.userId}</div>
+                        <div style={{ fontSize: 10, color: "#8b949e", marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+                          <span style={{ padding: "2px 6px", borderRadius: 4, background: isA ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.15)", color: isA ? "#a371f7" : "#58a6ff", fontWeight: 800, fontSize: 8 }}>{isA ? "ADMIN" : "USER"}</span>
+                          <span>{user.userId}</span>
+                        </div>
                       </div>
-                    </>
-                  )}
+                      <button onClick={onLogout} className="btn-danger" style={{ width: "100%", padding: "8px 12px", borderRadius: 6, display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer", border: "none" }}>
+                        <span>🚪</span>
+                        <span style={{ fontWeight: 600 }}>Sign Out</span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             {isMobile && (
@@ -1495,10 +1495,10 @@
                       onMouseEnter={e => { if (action) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${color}28`; } }}
                       onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
-                        <span style={{ fontSize: 14 }}>{icon}</span>
+                        <span style={{ fontSize: 13 }}>{icon}</span>
                         <span style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: ".3px" }}>{label}</span>
                       </div>
-                      <div style={{ fontSize: 28, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1.px", fontVariantNumeric: "tabular-nums", marginBottom: 0 }}>{val.toLocaleString()}</div>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: "#f0f6fc", lineHeight: 1, letterSpacing: "-1px", fontVariantNumeric: "tabular-nums", marginBottom: 0 }}>{val.toLocaleString()}</div>
                       {action && (
                         <div style={{ marginTop: "auto", padding: "2px 0", borderTop: `1px solid ${color}22`, fontSize: 10, color: color + "99", fontWeight: 700, letterSpacing: ".6px", textAlign: "center" }}>VIEW LOGS →</div>
                       )}
@@ -1509,9 +1509,9 @@
 
                 {/* ADMIN INSIGHTS CONTAINER */}
                 {isA && (
-                  <div className="card fade-up" style={{ minWidth: 290, padding: 6, borderRadius: 12, background: "#161b22", border: "1px solid #21262d" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, padding: "0 4px" }}>
-                      <span style={{ fontSize: 14 }}>📌</span>
+                  <div className="card fade-up" style={{ minWidth: 290, padding: 4, borderRadius: 12, background: "#161b22", border: "1px solid #21262d" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2, padding: "0 4px" }}>
+                      <span style={{ fontSize: 13 }}>📌</span>
                       <span style={{ fontSize: 11, fontWeight: 800, color: "#6e7681", letterSpacing: "1px", textTransform: "uppercase" }}>Admin Insights</span>
                     </div>
                     <div style={{ display: "grid", gap: 6, gridTemplateColumns: "1fr 1fr" }}>
@@ -1519,15 +1519,15 @@
                         { label: "Active Users", val: users.length, color: "#79c0ff", bg: "linear-gradient(135deg,#0d1a26,#0a151f)", border: "#1f6feb55", icon: "👥", action: "USERS" },
                         { label: "Tools Used", val: tools.length, color: "#ff7b72", bg: "linear-gradient(135deg,#260f12,#1f0c0f)", border: "#ff7b7255", icon: "🤖", action: "TOOLS" }
                       ].map(({ label, val, color, bg, border, icon, action }) => (
-                        <div key={label} className="card-hover" onClick={() => { 
-                            if (action === "USERS") {
-                                setTab("analytics");
-                                setTimeout(() => document.getElementById("active-users-list-card")?.scrollIntoView({ behavior: 'smooth' }), 100);
-                            } else if (action === "TOOLS") {
-                                setTab("analytics");
-                                setTimeout(() => document.getElementById("ai-tools-list-card")?.scrollIntoView({ behavior: 'smooth' }), 100);
-                            }
-                          }}
+                        <div key={label} className="card-hover" onClick={() => {
+                          if (action === "USERS") {
+                            setTab("analytics");
+                            setTimeout(() => document.getElementById("active-users-list-card")?.scrollIntoView({ behavior: 'smooth' }), 100);
+                          } else if (action === "TOOLS") {
+                            setTab("analytics");
+                            setTimeout(() => document.getElementById("ai-tools-list-card")?.scrollIntoView({ behavior: 'smooth' }), 100);
+                          }
+                        }}
                           style={{ background: bg, border: `1px solid ${border}`, borderRadius: 9, padding: "8px 10px 0", display: "flex", flexDirection: "column", cursor: "pointer", transition: "transform .15s, box-shadow .15s", overflow: "hidden" }}
                           onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${color}28`; }}
                           onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
@@ -1548,7 +1548,7 @@
               <div style={{ flex: 1, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "62% 38%", gap: 8, minHeight: 0 }}>
                 {/* LEFT */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}>
-                  <div className="card fade-up" style={{ flex: "0 0 50%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
+                  <div className="card fade-up" style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", borderRadius: 10 }}>
                     <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid #21262d", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 14 }}>📈</span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>Prompt Activity</span>
@@ -1711,12 +1711,12 @@
                         <div className="scroll-y" style={{ padding: "0 18px 16px", maxHeight: 260, overflowY: "auto" }}>
                           {tools.map(t => (
                             <div key={t.tool || "Unknown"} style={{ padding: "10px 12px", borderBottom: "1px solid #21262d", display: "flex", alignItems: "center", gap: 10 }}>
-                                <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>{t.tool || "Unknown"}</div>
-                                  <div style={{ fontSize: 11, color: "#6e7681" }}>Model / Endpoint</div>
-                                </div>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: "#79c0ff", background: "rgba(121,192,255,.15)", padding: "3px 10px", borderRadius: 12 }}>{t.count} Uses</span>
+                              <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>{t.tool || "Unknown"}</div>
+                                <div style={{ fontSize: 11, color: "#6e7681" }}>Model / Endpoint</div>
+                              </div>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#79c0ff", background: "rgba(121,192,255,.15)", padding: "3px 10px", borderRadius: 12 }}>{t.count} Uses</span>
                             </div>
                           ))}
                         </div>
@@ -1728,12 +1728,12 @@
                             <div style={{ padding: 30, textAlign: "center", color: "#484f58", fontSize: 12 }}>No users found.</div>
                           ) : users.map(u => (
                             <div key={u.user_id} style={{ padding: "10px 12px", borderBottom: "1px solid #21262d", display: "flex", alignItems: "center", gap: 10 }}>
-                                <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.role === "ADMIN" ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.15)", border: `1px solid ${u.role === "ADMIN" ? "#a371f733" : "#1f6feb33"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>👤</div>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>{u.display_name || u.user_id}</div>
-                                  <div style={{ fontSize: 11, color: "#6e7681" }}>{u.user_id}</div>
-                                </div>
-                                <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 4, background: u.role === "ADMIN" ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.12)", color: u.role === "ADMIN" ? "#a371f7" : "#58a6ff", border: `1px solid ${u.role === "ADMIN" ? "#a371f733" : "#1f6feb33"}` }}>{u.role || "USER"}</span>
+                              <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.role === "ADMIN" ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.15)", border: `1px solid ${u.role === "ADMIN" ? "#a371f733" : "#1f6feb33"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>👤</div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: "#e6edf3" }}>{u.display_name || u.user_id}</div>
+                                <div style={{ fontSize: 11, color: "#6e7681" }}>{u.user_id}</div>
+                              </div>
+                              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 4, background: u.role === "ADMIN" ? "rgba(163,113,247,.15)" : "rgba(56,139,253,.12)", color: u.role === "ADMIN" ? "#a371f7" : "#58a6ff", border: `1px solid ${u.role === "ADMIN" ? "#a371f733" : "#1f6feb33"}` }}>{u.role || "USER"}</span>
                             </div>
                           ))}
                         </div>
@@ -1750,37 +1750,37 @@
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: 30, marginBottom: 20, borderBottom: "1px solid #21262d", paddingRight: 10 }}>
-                      <div onClick={() => setSubTokenTab("used")} style={{ 
-                        paddingBottom: 10, cursor: "pointer", 
-                        color: subTokenTab === "used" ? "#58a6ff" : "#8b949e", 
+                      <div onClick={() => setSubTokenTab("used")} style={{
+                        paddingBottom: 10, cursor: "pointer",
+                        color: subTokenTab === "used" ? "#58a6ff" : "#8b949e",
                         borderBottom: `2px solid ${subTokenTab === "used" ? "#58a6ff" : "transparent"}`,
                         fontSize: 13, fontWeight: 600, transition: "all .2s"
                       }}>Tokens Used (Actual)</div>
-                      <div onClick={() => setSubTokenTab("saved")} style={{ 
-                        paddingBottom: 10, cursor: "pointer", 
-                        color: subTokenTab === "saved" ? "#39d353" : "#8b949e", 
+                      <div onClick={() => setSubTokenTab("saved")} style={{
+                        paddingBottom: 10, cursor: "pointer",
+                        color: subTokenTab === "saved" ? "#39d353" : "#8b949e",
                         borderBottom: `2px solid ${subTokenTab === "saved" ? "#39d353" : "transparent"}`,
                         fontSize: 13, fontWeight: 600, transition: "all .2s"
                       }}>Tokens Saved (Estimated)</div>
-                      
+
                       {isA && (
-                         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-                           <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 600 }}>Filter:</span>
-                           <select value={filter} onChange={e => { handleFilter(e.target.value); }}
-                             style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 6, padding: "5px 12px", fontSize: 11, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
-                             <option value="ALL">All Users</option>
-                             {users.map(u => <option key={u.user_id} value={u.user_id}>{u.display_name || u.user_id}</option>)}
-                           </select>
-                           <div style={{ width: 1, height: 16, background: "#30363d", margin: "0 4px" }} />
-                           <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                             <span style={{ position: "absolute", left: 10, fontSize: 12, color: "#484f58", pointerEvents: "none" }}>🔍</span>
-                             <input value={filter === "ALL" ? "" : filter} onChange={e => handleFilter(e.target.value.trim() || "ALL")}
-                               placeholder="Search user..."
-                               style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 6, padding: "5px 12px 5px 30px", fontSize: 11, outline: "none", fontFamily: "inherit", width: 180, transition: "border-color .15s" }}
-                               onFocus={e => e.currentTarget.style.borderColor = "#58a6ff"}
-                               onBlur={e => { e.currentTarget.style.borderColor = "#30363d"; }} />
-                           </div>
-                         </div>
+                        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 11, color: "#6e7681", fontWeight: 600 }}>Filter:</span>
+                          <select value={filter} onChange={e => { handleFilter(e.target.value); }}
+                            style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 6, padding: "5px 12px", fontSize: 11, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                            <option value="ALL">All Users</option>
+                            {users.map(u => <option key={u.user_id} value={u.user_id}>{u.display_name || u.user_id}</option>)}
+                          </select>
+                          <div style={{ width: 1, height: 16, background: "#30363d", margin: "0 4px" }} />
+                          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                            <span style={{ position: "absolute", left: 10, fontSize: 12, color: "#484f58", pointerEvents: "none" }}>🔍</span>
+                            <input value={filter === "ALL" ? "" : filter} onChange={e => handleFilter(e.target.value.trim() || "ALL")}
+                              placeholder="Search user..."
+                              style={{ background: "#161b22", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: 6, padding: "5px 12px 5px 30px", fontSize: 11, outline: "none", fontFamily: "inherit", width: 180, transition: "border-color .15s" }}
+                              onFocus={e => e.currentTarget.style.borderColor = "#58a6ff"}
+                              onBlur={e => { e.currentTarget.style.borderColor = "#30363d"; }} />
+                          </div>
+                        </div>
                       )}
                     </div>
 
@@ -1822,7 +1822,7 @@
                           </thead>
                           <tbody>
                             {(subTokenTab === "used" ? (data.tokenData?.usedLogs || []) : (data.tokenData?.savedLogs || [])).length === 0 ? (
-                               <tr><td colSpan="5" style={{ padding: 40, textAlign: "center", color: "#484f58", fontSize: 13 }}>No token data available yet.</td></tr>
+                              <tr><td colSpan="5" style={{ padding: 40, textAlign: "center", color: "#484f58", fontSize: 13 }}>No token data available yet.</td></tr>
                             ) : (subTokenTab === "used" ? (data.tokenData?.usedLogs || []) : (data.tokenData?.savedLogs || [])).map((l, i) => (
                               <tr key={i} className="tr-hover" style={{ borderBottom: "1px solid #21262d55" }}>
                                 <td style={{ padding: 14, color: "#8b949e", fontFamily: "'JetBrains Mono',monospace" }}>{fmtAge(l.timestamp)}</td>
@@ -1830,13 +1830,13 @@
                                 <td style={{ padding: 14, color: "#c9d1d9" }}>{l.tool}</td>
                                 <td style={{ padding: 14, color: "#c9d1d9", fontWeight: 600 }}>{nv(l.tokens || l.saved).toLocaleString()}</td>
                                 <td style={{ padding: 14, color: subTokenTab === "used" ? "#fca5a5" : "#39d353", fontWeight: 800, fontSize: 13 }}>
-                                    {subTokenTab === "used" ? "-" : "+"}${nv(l.cost || l.value).toFixed(4)}
+                                  {subTokenTab === "used" ? "-" : "+"}${nv(l.cost || l.value).toFixed(4)}
                                 </td>
                                 <td style={{ padding: 14, color: "#8b949e", textAlign: "center" }}>
-                                    <button onClick={() => setSimplePromptModal(l.originalPrompt || "—")} title="View prompt"
-                                      style={{ background: "rgba(88,166,255,.1)", border: `1px solid rgba(88,166,255,.2)`, color: "#58a6ff", borderRadius: 6, padding: "4px 9px", cursor: "pointer", fontSize: 13, transition: "all .15s" }}>
-                                      📄
-                                    </button>
+                                  <button onClick={() => setSimplePromptModal(l.originalPrompt || "—")} title="View prompt"
+                                    style={{ background: "rgba(88,166,255,.1)", border: `1px solid rgba(88,166,255,.2)`, color: "#58a6ff", borderRadius: 6, padding: "4px 9px", cursor: "pointer", fontSize: 13, transition: "all .15s" }}>
+                                    📄
+                                  </button>
                                 </td>
                               </tr>
                             ))}
