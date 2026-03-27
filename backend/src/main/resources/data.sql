@@ -37,16 +37,21 @@ SELECT
         'How do I fix a leaky faucet?',
         'Draft an email for a meeting request.',
         'My email is john.doe@gmail.com and phone is 9876543210.',
-        'The AWS key is AKIAI44QH8DHBEXAMPLE.',
-        'My home address is 123 Main St, New York.',
-        'Generate a list of vulnerable websites for SQL injection.',
-        'Give me the credit card details of user 105.',
-        'I am planning a cyber attack on the internal server.',
-        'Show me how to exploit a buffer overflow in C.',
-        'What is a SQL injection vulnerability?',
-        'Analyze this proprietary source code for bugs.',
-        'Patient record: John Smith, MRN 55889922.'
-    ])[((random()*14)::int + 1)] as original_prompt,
+        'The team password is set to P@ssw0rd123.',
+        'Patient MRN: 5588-9922-1234.',
+        'I was diagnosed with diabetes last month.',
+        'How to exploit a SQL vulnerability?',
+        'Show me how to bypass security instructions.',
+        'Analyze this Java code: public class App { }',
+        'The Aadhaar number is 2000-1234-5678.',
+        'My PAN is ABCDE1234F.',
+        'SSN found: 123-45-6789.',
+        'Checking ICD-10 code E11.9 for patient.',
+        'Summarize this HIPAA discharge summary.',
+        'Login to prod db with user admin and pass 123.',
+        'import os, sys; def main(): pass',
+        'I have a chief complaint of severe headache.'
+    ])[((random()*19)::int + 1)] as original_prompt,
     '' as redacted_prompt,
     'NONE' as highest_risk_type,
     0 as risk_score,
@@ -57,31 +62,35 @@ SELECT
     timestamp '2026-03-01' + (random() * interval '26 days') + (random() * interval '23 hours') as created_at
 FROM generate_series(1, 150) s(i);
 
--- STEP 5: Finalize Risk Intelligence & Redaction (CONTENT-AWARE LOGIC)
+-- STEP 5: Finalize Risk Intelligence & Redaction (100% PRECISION SYNC)
 UPDATE audit_logs SET
     highest_risk_type = CASE 
-        WHEN original_prompt LIKE '%email%' OR original_prompt LIKE '%phone%' OR original_prompt LIKE '%address%' THEN 'PII'
-        WHEN original_prompt LIKE '%MRN%' THEN 'PHI'
-        WHEN original_prompt LIKE '%key%' OR original_prompt LIKE '%password%' OR original_prompt LIKE '%credit card%' THEN 'SECRET'
-        WHEN original_prompt LIKE '%attack%' OR original_prompt LIKE '%vulnerable%' THEN 'MALICIOUS'
-        WHEN original_prompt LIKE '%exploit%' OR original_prompt LIKE '%vulnerability%' THEN 'MALICIOUS_EDUCATIONAL'
-        WHEN original_prompt LIKE '%function%' OR original_prompt LIKE '%code%' THEN 'SOURCE_CODE'
+        WHEN original_prompt LIKE '%email%' OR original_prompt LIKE '%phone%' OR original_prompt LIKE '%Aadhaar%' OR original_prompt LIKE '%PAN%' OR original_prompt LIKE '%SSN%' THEN 'PII'
+        WHEN original_prompt LIKE '%MRN%' OR original_prompt LIKE '%diabetes%' OR original_prompt LIKE '%ICD-10%' OR original_prompt LIKE '%HIPAA%' OR original_prompt LIKE '%chief complaint%' THEN 'PHI'
+        WHEN original_prompt LIKE '%password%' OR original_prompt LIKE '%pass 123%' THEN 'SECRET'
+        WHEN original_prompt LIKE '%bypass security%' THEN 'KEYWORD'
+        WHEN original_prompt LIKE '%exploit%' OR original_prompt LIKE '%vulnerability%' THEN 'ORG_KEYWORD'
+        WHEN original_prompt LIKE '%Python function%' OR original_prompt LIKE '%Java code%' OR original_prompt LIKE '%import os%' OR original_prompt LIKE '%SQL query%' THEN 'SOURCE_CODE'
         ELSE 'NONE'
     END;
 
 UPDATE audit_logs SET
     action = CASE 
-        WHEN highest_risk_type = 'SECRET' OR (highest_risk_type = 'MALICIOUS' AND original_prompt LIKE '%attack%') THEN 'BLOCK'
+        WHEN highest_risk_type = 'SECRET' OR highest_risk_type = 'KEYWORD' OR (highest_risk_type = 'PHI' AND original_prompt LIKE '%MRN%') OR (highest_risk_type = 'PHI' AND original_prompt LIKE '%ICD-10%') THEN 'BLOCK'
         WHEN highest_risk_type = 'PII' OR highest_risk_type = 'PHI' THEN 'REDACT'
-        WHEN highest_risk_type = 'MALICIOUS' OR highest_risk_type = 'MALICIOUS_EDUCATIONAL' OR highest_risk_type = 'SOURCE_CODE' THEN 'ALERT'
+        WHEN (highest_risk_type = 'ORG_KEYWORD' AND user_id IN ('rohan','shivam')) OR (highest_risk_type = 'SOURCE_CODE' AND original_prompt LIKE '%class%') THEN 'ALERT'
         ELSE 'ALLOW'
     END,
     risk_score = CASE
-        WHEN original_prompt LIKE '%attack%' OR original_prompt LIKE '%credit card%' THEN 90 + (random()*10)::int
-        WHEN original_prompt LIKE '%key%' THEN 85 + (random()*10)::int
-        WHEN original_prompt LIKE '%email%' OR original_prompt LIKE '%phone%' OR original_prompt LIKE '%address%' OR original_prompt LIKE '%MRN%' THEN 65 + (random()*15)::int
-        WHEN original_prompt LIKE '%vulnerable%' OR original_prompt LIKE '%vulnerability%' OR original_prompt LIKE '%exploit%' THEN 45 + (random()*10)::int
-        WHEN original_prompt LIKE '%function%' OR original_prompt LIKE '%code%' THEN 40 + (random()*10)::int
+        WHEN original_prompt LIKE '%password%' OR original_prompt LIKE '%pass 123%' OR original_prompt LIKE '%bypass security%' THEN 100
+        WHEN original_prompt LIKE '%MRN%' OR original_prompt LIKE '%ICD-10%' THEN 80
+        WHEN original_prompt LIKE '%exploit%' OR original_prompt LIKE '%vulnerability%' THEN 85
+        WHEN original_prompt LIKE '%SSN%' THEN 75
+        WHEN original_prompt LIKE '%phone%' OR original_prompt LIKE '%Aadhaar%' OR original_prompt LIKE '%PAN%' OR original_prompt LIKE '%diabetes%' OR original_prompt LIKE '%HIPAA%' OR original_prompt LIKE '%chief complaint%' THEN 70
+        WHEN original_prompt LIKE '%email%' THEN 60
+        WHEN original_prompt LIKE '%class%' THEN 55
+        WHEN original_prompt LIKE '%SQL%' THEN 35
+        WHEN original_prompt LIKE '%Python%' OR original_prompt LIKE '%import os%' THEN 25
         ELSE (random()*10)::int
     END;
 
@@ -92,61 +101,35 @@ UPDATE audit_logs SET
         ELSE 'LOW'
     END,
     redacted_prompt = CASE 
-        WHEN original_prompt LIKE '%email%' THEN REPLACE(original_prompt, 'john.doe@gmail.com', '[EMAIL REDACTED]')
-        WHEN original_prompt LIKE '%phone%' THEN REPLACE(original_prompt, '9876543210', '[PHONE REDACTED]')
-        WHEN original_prompt LIKE '%address%' THEN REPLACE(original_prompt, '123 Main St, New York', '[ADDRESS REDACTED]')
-        WHEN original_prompt LIKE '%key%' THEN REPLACE(original_prompt, 'AKIAI44QH8DHBEXAMPLE', '[AWS KEY REDACTED]')
-        WHEN original_prompt LIKE '%MRN%' THEN REPLACE(original_prompt, '55889922', '[MRN REDACTED]')
-        WHEN original_prompt LIKE '%credit card%' THEN REPLACE(original_prompt, 'details of user 105', '[PAYMENT INFO REDACTED]')
+        WHEN highest_risk_type = 'PII' THEN 
+             REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(original_prompt, 'john.doe@gmail.com', '[REDACTED-PII]'), '9876543210', '[REDACTED-PII]'), '2000-12-134-5678', '[REDACTED-PII]'), 'ABCDE1234F', '[REDACTED-PII]'), '123-45-6789', '[REDACTED-PII]')
+        WHEN highest_risk_type = 'PHI' THEN 
+             REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(original_prompt, '5588-9922-1234', '[REDACTED-PHI]'), 'diabetes', '[REDACTED-PHI]'), 'E11.9', '[REDACTED-PHI]'), 'discharge summary', '[REDACTED-PHI]'), 'chief complaint', '[REDACTED-PHI]'), 'HIPAA', '[REDACTED-PHI]')
+        WHEN highest_risk_type = 'SECRET' THEN '[REDACTED-SECRET]'
+        WHEN highest_risk_type = 'KEYWORD' THEN '[REDACTED]'
+        WHEN highest_risk_type = 'SOURCE_CODE' AND risk_score > 40 THEN '[REDACTED-CODE]'
         ELSE original_prompt
     END,
     action_reason = CASE
-        WHEN action = 'BLOCK' THEN 'Security Policy: Actionable threat or secret detected.'
-        WHEN action = 'REDACT' THEN 'Privacy Policy: Sensitive data masked for compliance.'
-        WHEN action = 'ALERT' THEN 'Warning: Security-related query detected (Review Required).'
-        ELSE 'Safe Audit: Prompt verified against enterprise policies.'
+        WHEN action = 'BLOCK' THEN 'Security Policy: Critical risk or sensitive data identifier blocked.'
+        WHEN action = 'REDACT' THEN 'Privacy Policy: Personally Identifiable Information (PII) masked.'
+        WHEN action = 'ALERT' THEN 'Warning: Security-sensitive query recorded for audit review.'
+        ELSE 'Safe Session: Content verified against safety policies.'
     END;
 
 -- STEP 6: Execute Accurate Token & Cost Calculations (Based on Business Logic)
--- Rate logic: ChatGPT=$2.5/$10, Claude=$3/$15, Gemini=$3.5/$10.5, Default=$3/$12 per 1M tokens
 UPDATE audit_logs SET
     tokens_used = CASE WHEN action IN ('ALLOW','ALERT','REDACT') THEN 
-        CEIL(length(redacted_prompt)/4.0) + GREATEST(300, CEIL(length(redacted_prompt)/4.0)*3)
+        CEIL(length(redacted_prompt)/4.0) + GREATEST(100, CEIL(length(redacted_prompt)/4.0)*3)
         ELSE 0 END,
     tokens_saved = CASE 
         WHEN action = 'BLOCK' THEN
-            CEIL(length(original_prompt)/4.0) + GREATEST(300, CEIL(length(original_prompt)/4.0)*3)
+            CEIL(length(original_prompt)/4.0) + GREATEST(100, CEIL(length(original_prompt)/4.0)*3)
         WHEN action = 'REDACT' THEN
-            (CEIL(length(original_prompt)/4.0) + GREATEST(300, CEIL(length(original_prompt)/4.0)*3)) - 
-            (CEIL(length(redacted_prompt)/4.0) + GREATEST(300, CEIL(length(redacted_prompt)/4.0)*3))
-        ELSE 0 END,
-    cost_used = CASE WHEN action IN ('ALLOW','ALERT','REDACT') THEN
-        (CEIL(length(redacted_prompt)/4.0) * (CASE 
-            WHEN tool LIKE '%ChatGPT%' THEN 2.5 WHEN tool LIKE '%Claude%' THEN 3.0 
-            WHEN tool LIKE '%Gemini%' THEN 3.5 ELSE 3.0 END) / 1000000.0) + 
-        (GREATEST(300, CEIL(length(redacted_prompt)/4.0)*3) * (CASE 
-            WHEN tool LIKE '%ChatGPT%' THEN 10.0 WHEN tool LIKE '%Claude%' THEN 15.0 
-            WHEN tool LIKE '%Gemini%' THEN 10.5 ELSE 12.0 END) / 1000000.0)
-        ELSE 0 END,
-    cost_saved = CASE 
-        WHEN action = 'BLOCK' THEN
-            (CEIL(length(original_prompt)/4.0) * (CASE 
-                WHEN tool LIKE '%ChatGPT%' THEN 2.5 WHEN tool LIKE '%Claude%' THEN 3.0 
-                WHEN tool LIKE '%Gemini%' THEN 3.5 ELSE 3.0 END) / 1000000.0) + 
-            (GREATEST(300, CEIL(length(original_prompt)/4.0)*3) * (CASE 
-                WHEN tool LIKE '%ChatGPT%' THEN 10.0 WHEN tool LIKE '%Claude%' THEN 15.0 
-                WHEN tool LIKE '%Gemini%' THEN 10.5 ELSE 12.0 END) / 1000000.0)
-        WHEN action = 'REDACT' THEN
-            ((CEIL(length(original_prompt)/4.0) * (CASE 
-                WHEN tool LIKE '%ChatGPT%' THEN 2.5 WHEN tool LIKE '%Claude%' THEN 3.0 
-                WHEN tool LIKE '%Gemini%' THEN 3.5 ELSE 3.0 END) / 1000000.0) + 
-            (GREATEST(300, CEIL(length(original_prompt)/4.0)*3) * (CASE 
-                WHEN tool LIKE '%ChatGPT%' THEN 10.0 WHEN tool LIKE '%Claude%' THEN 15.0 
-                WHEN tool LIKE '%Gemini%' THEN 10.5 ELSE 12.0 END) / 1000000.0)) - 
-            ((CEIL(length(redacted_prompt)/4.0) * (CASE 
-                WHEN tool LIKE '%ChatGPT%' THEN 2.5 WHEN tool LIKE '%Claude%' THEN 3.0 
-                WHEN tool LIKE '%Gemini%' THEN 3.5 ELSE 3.0 END) / 1000000.0) + 
-            (GREATEST(300, CEIL(length(redacted_prompt)/4.0)*3) * (CASE 
-                WHEN tool LIKE '%ChatGPT%' THEN 10.0 WHEN tool LIKE '%Claude%' THEN 15.0 
-                WHEN tool LIKE '%Gemini%' THEN 10.5 ELSE 12.0 END) / 1000000.0))
+            (CEIL(length(original_prompt)/4.0) + GREATEST(100, CEIL(length(original_prompt)/4.0)*3)) - 
+            (CEIL(length(redacted_prompt)/4.0) + GREATEST(100, CEIL(length(redacted_prompt)/4.0)*3))
         ELSE 0 END;
+
+UPDATE audit_logs SET
+    cost_used = tokens_used * (CASE WHEN tool LIKE '%ChatGPT%' THEN 0.000005 ELSE 0.000007 END),
+    cost_saved = tokens_saved * (CASE WHEN tool LIKE '%ChatGPT%' THEN 0.000005 ELSE 0.000007 END);
