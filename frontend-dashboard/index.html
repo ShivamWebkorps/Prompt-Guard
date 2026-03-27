@@ -1356,7 +1356,11 @@
       const [promptActivityFilter, setPromptActivityFilter] = useState("7");
       const [showUserDropdown, setShowUserDropdown] = useState(false);
 
-      const getOrg = (uid) => uid === "kushal-user" ? "Telecomm" : uid === "rohan-user" ? "Software" : "Other";
+      const getOrg = (uid) => {
+        if (uid === "rohan" || uid === "shivam") return "Software";
+        if (uid === "kushal" || uid === "raj") return "Telecomm";
+        return "Other";
+      };
       const orgLabel = (o) => o;
       const allOrgs = ["Software", "Telecomm", "Other"];
 
