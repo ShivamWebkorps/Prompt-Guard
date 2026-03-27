@@ -3,7 +3,12 @@
 -- 150 Sample Prompts for rohan, kushal, shivam, raj
 -- ========================================================
 
--- Ensure organizations and users exist
+-- STEP 1: Full Cleanup to ensure clean testing state
+DELETE FROM audit_logs;
+DELETE FROM users;
+DELETE FROM organizations;
+
+-- STEP 2: Insert Pure Data
 INSERT INTO organizations (org_id, org_name) VALUES (101, 'Telecomm') ON CONFLICT (org_id) DO NOTHING;
 INSERT INTO organizations (org_id, org_name) VALUES (102, 'Software') ON CONFLICT (org_id) DO NOTHING;
 
@@ -13,12 +18,7 @@ INSERT INTO users (user_id, display_name, role) VALUES ('kushal', 'Kushal', 'USE
 INSERT INTO users (user_id, display_name, role) VALUES ('raj', 'Raj', 'USER') ON CONFLICT (user_id) DO NOTHING;
 INSERT INTO users (user_id, display_name, role) VALUES ('admin', 'System Admin', 'ADMIN') ON CONFLICT (user_id) DO NOTHING;
 
--- Clear previous test data
-DELETE FROM audit_logs;
-
--- Helper table for random generation in SQL (150 rows)
--- We use a CROSS JOIN trick to generate volume
-
+-- STEP 3: Generate Volume (150 rows)
 INSERT INTO audit_logs (user_id, tool, browser_name, original_prompt, redacted_prompt, highest_risk_type, risk_score, risk_level, action, created_at)
 SELECT 
     CASE (random()*4)::int % 4
@@ -53,7 +53,7 @@ SELECT
     timestamp '2026-03-01' + (random() * interval '26 days') as created_at
 FROM generate_series(1, 150) s(i);
 
--- Update risk_level based on score for realism
+-- STEP 4: Refine attributes for realism
 UPDATE audit_logs SET risk_level = 'HIGH' WHERE risk_score > 75;
 UPDATE audit_logs SET risk_level = 'LOW' WHERE risk_score < 30;
 UPDATE audit_logs SET action = 'ALLOW', highest_risk_type = 'NONE' WHERE action = 'ALLOW';
