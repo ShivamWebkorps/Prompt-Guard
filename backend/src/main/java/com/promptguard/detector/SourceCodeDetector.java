@@ -12,12 +12,12 @@ import java.util.regex.Pattern;
 /**
  * SourceCodeDetector — detects SQL, Java, and Python code in prompts.
  *
- * All scores kept BELOW 80 so PolicyEngine routes to ALERT (not BLOCK):
- *   SQL query      → score=55 → MEDIUM → ALERT
- *   Python code    → score=50 → MEDIUM → ALERT
- *   Java import    → score=50 → MEDIUM → ALERT
- *   Java class     → score=65 → HIGH   → ALERT
- *   Java annotation→ score=60 → HIGH   → ALERT
+ * All scores for standard patterns kept BELOW 40 so PolicyEngine routes to ALLOW:
+ *   SQL query      → score=35 → LOW → ALLOW
+ *   Python code    → score=25 → LOW → ALLOW
+ *   Java import    → score=25 → LOW → ALLOW
+ *   Java class     → score=55 → MEDIUM → ALERT
+ *   Java annotation→ score=35 → LOW → ALLOW
  *
  * PolicyEngine checks SOURCE_CODE type explicitly and always returns ALERT.
  */
@@ -55,37 +55,37 @@ public class SourceCodeDetector {
 
         // Java class / interface / enum
         if (JAVA_CLASS.matcher(prompt).find()) {
-            results.add(new DetectionResult(RiskType.SOURCE_CODE, 65,
+            results.add(new DetectionResult(RiskType.SOURCE_CODE, 55,
                 "Source code detected: Java class/interface",
                 snippet(prompt, JAVA_CLASS)));
         }
         // Java Spring annotations
         if (JAVA_ANNOTATION.matcher(prompt).find()) {
-            results.add(new DetectionResult(RiskType.SOURCE_CODE, 60,
+            results.add(new DetectionResult(RiskType.SOURCE_CODE, 35,
                 "Source code detected: Java annotation",
                 snippet(prompt, JAVA_ANNOTATION)));
         }
         // Java imports
         if (JAVA_IMPORT.matcher(prompt).find()) {
-            results.add(new DetectionResult(RiskType.SOURCE_CODE, 50,
+            results.add(new DetectionResult(RiskType.SOURCE_CODE, 25,
                 "Source code detected: Java import",
                 "import statement"));
         }
         // SQL SELECT
         if (SQL_SELECT.matcher(prompt).find()) {
-            results.add(new DetectionResult(RiskType.SOURCE_CODE, 55,
+            results.add(new DetectionResult(RiskType.SOURCE_CODE, 35,
                 "Source code detected: SQL SELECT query",
                 "SQL query"));
         }
         // SQL INSERT
         if (SQL_INSERT.matcher(prompt).find()) {
-            results.add(new DetectionResult(RiskType.SOURCE_CODE, 55,
+            results.add(new DetectionResult(RiskType.SOURCE_CODE, 35,
                 "Source code detected: SQL INSERT query",
                 "SQL query"));
         }
         // SQL UPDATE
         if (SQL_UPDATE.matcher(prompt).find()) {
-            results.add(new DetectionResult(RiskType.SOURCE_CODE, 55,
+            results.add(new DetectionResult(RiskType.SOURCE_CODE, 35,
                 "Source code detected: SQL UPDATE query",
                 "SQL query"));
         }
@@ -97,13 +97,13 @@ public class SourceCodeDetector {
         }
         // Python function definition
         if (PYTHON_DEF.matcher(prompt).find()) {
-            results.add(new DetectionResult(RiskType.SOURCE_CODE, 50,
+            results.add(new DetectionResult(RiskType.SOURCE_CODE, 25,
                 "Source code detected: Python function",
                 snippet(prompt, PYTHON_DEF)));
         }
         // Python imports
         if (PYTHON_IMPORT.matcher(prompt).find()) {
-            results.add(new DetectionResult(RiskType.SOURCE_CODE, 50,
+            results.add(new DetectionResult(RiskType.SOURCE_CODE, 25,
                 "Source code detected: Python import",
                 "Python import"));
         }
